@@ -1,12 +1,10 @@
 # Dependencies
 node_modules
 .pnpm-store
-
 # Build output
 dist
 dist-ssr
 *.local
-
 # Editor / OS
 .DS_Store
 .vscode/*
@@ -17,7 +15,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
 # Logs
 logs
 *.log
@@ -25,6 +22,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
 # TS build artifacts
 *.tsbuildinfo
+tempo/.tempo/
+tempo/node_modules/
+tempo/dist/
