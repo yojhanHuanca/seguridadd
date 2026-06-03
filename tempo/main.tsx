@@ -1,6 +1,5 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "../src/styles/globals.css";
 import App from "./App";
 import TempoHost from "./.tempo/tempo-host";
 import "./globals.css";

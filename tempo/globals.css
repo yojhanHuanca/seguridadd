@@ -1,6 +1,1 @@
-@import "tailwindcss" source(none);
 @import "../src/styles/globals.css";
-
-@config "../tailwind.config.ts";
-@source "../src";
-@source "./designs/canvases";
