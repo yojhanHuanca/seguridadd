@@ -142,12 +142,3 @@ export const Storyboard3: TempoStoryboard = {
   layout: { x: 0, y: -179, width: 533, height: 105 },
 };
 
-export const Storyboard1: TempoStoryboard = {
-  render: () => (
-    <div className="wtt">
-      <Storyboard1Component />
-    </div>
-  ),
-  layout: { x: 969, y: -455, width: 173, height: 239 },
-};
-
