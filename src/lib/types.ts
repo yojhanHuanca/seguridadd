@@ -120,6 +120,10 @@ export interface CaseFile {
   stage: Stage;
   reporter: string;
   reporterRole: Role;
+  anonymous?: boolean;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   assignee?: string;
   assigneeArea?: Area;
   assignmentPriority?: Priority;

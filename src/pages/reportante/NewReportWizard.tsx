@@ -9,15 +9,33 @@ import {
   Image as ImageIcon,
   Video,
   X,
-  Sparkles,
   CheckCircle2,
-  MapPin,
-  Calendar,
-  Clock,
   Tag,
-  AlertTriangle,
-  Train,
+  MapPin,
   Type,
+  ShieldCheck,
+  User,
+  Sparkles,
+  Train,
+  Building2,
+  Footprints,
+  Car,
+  ArrowUpDown,
+  Layers,
+  DoorOpen,
+  Warehouse,
+  HelpCircle,
+  AlertTriangle,
+  Eye,
+  Wrench,
+  Flag,
+  Lightbulb,
+  FileSearch,
+  Type as TypeIcon,
+  Send,
+  Lock,
+  Info,
+  PartyPopper,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { ReportanteShell } from "@/design-system/layout/ReportanteShell";
@@ -29,52 +47,60 @@ import { cn, uid } from "@/lib/utils";
 import {
   AREA_LABELS,
   EVENT_LABELS,
-  PRIORITY_LABELS,
   STATIONS,
   type Area,
   type Evidence,
   type EventType,
-  type Priority,
 } from "@/lib/types";
 
 const STEPS = [
   { id: 0, label: "Tipo", icon: Tag },
   { id: 1, label: "Ubicación", icon: MapPin },
-  { id: 2, label: "Detalle", icon: Type },
+  { id: 2, label: "Descripción", icon: Type },
   { id: 3, label: "Evidencias", icon: Upload },
-  { id: 4, label: "Revisión", icon: CheckCircle2 },
+  { id: 4, label: "Envío", icon: ShieldCheck },
 ] as const;
 
-const EVENT_OPTIONS: { value: EventType; hint: string }[] = [
-  { value: "accidente", hint: "Lesión o daño a personas/instalaciones" },
-  { value: "incidente", hint: "Evento que pudo derivar en accidente" },
-  { value: "observacion", hint: "Comportamiento o situación detectada" },
-  { value: "condicion_insegura", hint: "Estado físico con potencial de riesgo" },
-  { value: "acto_inseguro", hint: "Acción fuera de procedimiento" },
-  { value: "falla_operativa", hint: "Falla de equipo o sistema" },
-  { value: "riesgo", hint: "Situación con potencial de daño" },
-  { value: "hallazgo", hint: "Detección de auditoría o inspección" },
-  { value: "incumplimiento", hint: "No conformidad de procedimiento" },
-  { value: "otro", hint: "Otro evento relacionado" },
+const REPORT_TYPES: { value: EventType; label: string; icon: typeof Tag; hint: string }[] = [
+  { value: "accidente", label: "Accidente", icon: AlertTriangle, hint: "Lesión o daño" },
+  { value: "incidente", label: "Incidente", icon: Flag, hint: "Casi accidente" },
+  { value: "observacion", label: "Observación", icon: Eye, hint: "Comportamiento" },
+  { value: "condicion_insegura", label: "Condición Insegura", icon: Wrench, hint: "Estado físico" },
+  { value: "acto_inseguro", label: "Acto Inseguro", icon: AlertTriangle, hint: "Acción de riesgo" },
+  { value: "falla_operativa", label: "Falla Operativa", icon: Wrench, hint: "Equipo o sistema" },
+  { value: "riesgo", label: "Riesgo", icon: ShieldCheck, hint: "Potencial daño" },
+  { value: "hallazgo", label: "Hallazgo", icon: Lightbulb, hint: "Detección" },
+  { value: "otro", label: "Otro", icon: HelpCircle, hint: "Otro evento" },
+];
+
+const LOCATIONS = [
+  { value: "Andén", icon: Layers },
+  { value: "Vagón", icon: Train },
+  { value: "Escalera Mecánica", icon: ArrowUpDown },
+  { value: "Ascensor", icon: ArrowUpDown },
+  { value: "Boletería", icon: Building2 },
+  { value: "Pasillo", icon: Footprints },
+  { value: "Acceso", icon: DoorOpen },
+  { value: "Patio Taller", icon: Warehouse },
+  { value: "Otro", icon: MapPin },
 ];
 
 export function NewReportWizard() {
   const navigate = useNavigate();
-  const { createReport, currentUser } = useStore();
+  const { createReport } = useStore();
   const [step, setStep] = useState(0);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     type: "" as EventType | "",
-    title: "",
-    area: "" as Area | "",
     station: "",
     location: "",
-    date: new Date().toISOString().slice(0, 10),
-    time: new Date().toTimeString().slice(0, 5),
     description: "",
-    observations: "",
-    priority: "media" as Priority,
     evidence: [] as Evidence[],
+    anonymous: true,
+    contactName: "",
+    contactEmail: "",
+    contactPhone: "",
   });
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
@@ -85,7 +111,7 @@ export function NewReportWizard() {
       case 0:
         return !!form.type;
       case 1:
-        return !!form.area && !!form.station && form.location.trim().length > 0;
+        return !!form.station;
       case 2:
         return form.description.trim().length >= 10;
       default:
@@ -109,386 +135,334 @@ export function NewReportWizard() {
     ]);
   };
 
-  const removeEvidence = (id: string) =>
-    set("evidence", form.evidence.filter((e) => e.id !== id));
+  const removeEvidence = (id: string) => set("evidence", form.evidence.filter((e) => e.id !== id));
 
   const submit = () => {
+    const reporterName = form.anonymous ? "Reporte Anónimo" : form.contactName.trim() || "Reportante Identificado";
     const newCase = createReport({
       type: form.type as EventType,
-      title: form.title.trim() || `${EVENT_LABELS[form.type as EventType]} en ${form.station}`,
-      description: form.description,
-      observations: form.observations,
-      area: form.area as Area,
+      title: `${EVENT_LABELS[form.type as EventType]} en ${form.station}`,
+      description: form.description.trim(),
+      observations: form.location ? `Lugar específico: ${form.location}` : "",
+      area: "operaciones" as Area, // SO lo reclasificará después
       station: form.station,
       location: form.location,
-      date: form.date,
-      time: form.time,
-      priority: form.priority,
+      date: new Date().toISOString().slice(0, 10),
+      time: new Date().toTimeString().slice(0, 5),
+      priority: "media",
       evidence: form.evidence,
-      reporter: currentUser.name,
+      reporter: reporterName,
+      anonymous: form.anonymous,
+      contactName: form.anonymous ? undefined : form.contactName.trim() || undefined,
+      contactEmail: form.anonymous ? undefined : form.contactEmail.trim() || undefined,
+      contactPhone: form.anonymous ? undefined : form.contactPhone.trim() || undefined,
     });
-    navigate(`/reportante/mis-reportes?nuevo=${newCase.id}`);
+    // Generar código SOP-XXXX-2026
+    const seqNum = newCase.id.match(/(\d+)$/)?.[1] ?? "0001";
+    const sopCode = `SOP-${seqNum.padStart(4, "0")}-2026`;
+    setSuccess(sopCode);
   };
+
+  // ─── Pantalla de éxito ───
+  if (success) {
+    return (
+      <ReportanteShell>
+        <div className="max-w-xl mx-auto">
+          <Card className="p-8 text-center border-brand-200">
+            <div className="mx-auto h-20 w-20 rounded-full bg-brand-700 text-white grid place-items-center animate-[riseUp_0.4s_ease-out]">
+              <PartyPopper className="h-10 w-10" />
+            </div>
+            <h1 className="mt-6 text-[24px] font-bold text-ink tracking-tight font-display">
+              ¡Tu reporte fue registrado correctamente!
+            </h1>
+            <p className="text-[13.5px] text-ink-soft mt-2 leading-relaxed">
+              El equipo de Seguridad Operativa revisará la información y, de ser necesario, iniciará el proceso de evaluación e investigación.
+            </p>
+            <div className="mt-6 rounded-xl bg-brand-50 border border-brand-200 p-5">
+              <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-brand-700">Código del reporte</p>
+              <p className="mt-1.5 text-[28px] font-bold font-mono text-brand-900 tracking-tight">{success}</p>
+            </div>
+            <Button className="mt-6 w-full" size="lg" onClick={() => navigate("/reportante")}>
+              <Check className="h-5 w-5" /> Finalizar
+            </Button>
+          </Card>
+        </div>
+      </ReportanteShell>
+    );
+  }
 
   return (
     <ReportanteShell>
-      {/* Wizard header */}
-      <div className="rounded-2xl bg-white border border-line p-5 shadow-[var(--shadow-card)]">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-brand-700">
-              Nuevo reporte · Asistente
-            </p>
-            <h1 className="mt-1 text-[22px] font-bold text-ink tracking-tight">
-              Registrar una incidencia
-            </h1>
-            <p className="text-[13px] text-ink-quiet mt-1">
-              Complete los pasos en menos de un minuto. Al finalizar se generará el código del caso.
-            </p>
-          </div>
-          <Pill tone="brand" dot>
-            Paso {step + 1} de {STEPS.length}
-          </Pill>
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-brand-700">Registrar Incidencia</p>
+          <h1 className="mt-1 text-[26px] font-bold text-ink tracking-tight font-display">Reporta lo que observaste</h1>
+          <p className="text-[13.5px] text-ink-quiet mt-1.5">Toma menos de un minuto. Tú solo reportas, nosotros nos encargamos del resto.</p>
         </div>
 
         {/* Stepper */}
-        <div className="mt-6 flex items-center gap-1.5">
-          {STEPS.map((s, i) => {
-            const done = i < step;
-            const active = i === step;
-            return (
-              <div key={s.id} className="flex items-center flex-1 last:flex-none">
-                <div
-                  className={cn(
+        <Card className="p-4 mb-5">
+          <div className="flex items-center gap-1.5">
+            {STEPS.map((s, i) => {
+              const done = i < step;
+              const active = i === step;
+              return (
+                <div key={s.id} className="flex items-center flex-1 last:flex-none">
+                  <div className={cn(
                     "h-9 px-3 rounded-full flex items-center gap-2 text-[12px] font-medium transition-all",
                     done && "bg-brand-700 text-white",
                     active && "bg-brand-50 text-brand-800 ring-1 ring-brand-200",
                     !done && !active && "bg-surface-2 text-ink-faint"
-                  )}
-                >
-                  <span
-                    className={cn(
+                  )}>
+                    <span className={cn(
                       "h-5 w-5 rounded-full grid place-items-center text-[11px]",
                       done && "bg-white/20",
                       active && "bg-brand-700 text-white",
                       !done && !active && "bg-white text-ink-faint"
-                    )}
-                  >
-                    {done ? <Check className="h-3 w-3" /> : i + 1}
-                  </span>
-                  <span className="hidden sm:inline">{s.label}</span>
+                    )}>
+                      {done ? <Check className="h-3 w-3" /> : i + 1}
+                    </span>
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <div className={cn("h-0.5 flex-1 mx-1 rounded-full", done ? "bg-brand-700" : "bg-line")} />
+                  )}
                 </div>
-                {i < STEPS.length - 1 && (
-                  <div className={cn("h-0.5 flex-1 mx-1 rounded-full", done ? "bg-brand-700" : "bg-line")} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+              );
+            })}
+          </div>
+        </Card>
 
-      {/* Step body */}
-      <div className="mt-5">
-        {step === 0 && (
-          <StepCard
-            eyebrow="Paso 1"
-            title="¿Qué tipo de evento reporta?"
-            description="Seleccione la categoría que mejor describa la situación. Esto define el flujo del caso."
-          >
-            <div className="grid sm:grid-cols-2 gap-2.5">
-              {EVENT_OPTIONS.map((opt) => {
-                const active = form.type === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => set("type", opt.value)}
-                    className={cn(
-                      "text-left p-4 rounded-xl border transition-all flex items-start gap-3",
-                      active
-                        ? "border-brand-600 bg-brand-50 ring-1 ring-brand-200"
-                        : "border-line bg-white hover:border-line-strong hover:bg-surface/50"
-                    )}
-                  >
-                    <div
+        {/* Step body */}
+        <Card className="p-6 min-h-[340px]">
+          {/* Paso 1 — Tipo de Reporte */}
+          {step === 0 && (
+            <StepBox title="¿Qué desea reportar?" subtitle="Selecciona el tipo de incidencia que observaste.">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {REPORT_TYPES.map((opt) => {
+                  const active = form.type === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => set("type", opt.value)}
                       className={cn(
-                        "h-9 w-9 rounded-lg grid place-items-center shrink-0",
-                        active ? "bg-brand-700 text-white" : "bg-surface-2 text-ink-soft"
+                        "p-4 rounded-xl border text-left transition-all flex flex-col items-start gap-2",
+                        active
+                          ? "border-brand-600 bg-brand-50 ring-2 ring-brand-200"
+                          : "border-line bg-white hover:border-line-strong hover:bg-surface/50"
                       )}
                     >
-                      <Tag className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13.5px] font-semibold text-ink">{EVENT_LABELS[opt.value]}</p>
-                      <p className="text-[11.5px] text-ink-quiet mt-0.5">{opt.hint}</p>
-                    </div>
-                    {active && <Check className="h-4 w-4 text-brand-700 shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
-          </StepCard>
-        )}
-
-        {step === 1 && (
-          <StepCard
-            eyebrow="Paso 2"
-            title="¿Dónde ocurrió?"
-            description="Identifique el área responsable y la ubicación exacta dentro de la red de Línea 1."
-          >
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Área relacionada" required>
-                <Select value={form.area} onChange={(e) => set("area", e.target.value as Area)}>
-                  <option value="">Seleccione un área…</option>
-                  {(Object.keys(AREA_LABELS) as Area[]).map((a) => (
-                    <option key={a} value={a}>{AREA_LABELS[a]}</option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Estación" required>
-                <Select value={form.station} onChange={(e) => set("station", e.target.value)}>
-                  <option value="">Seleccione una estación…</option>
-                  {STATIONS.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Ubicación específica" required className="sm:col-span-2" hint="Ej. Plataforma sur · vía 2, Andén central, Sala de tableros">
-                <Input
-                  value={form.location}
-                  onChange={(e) => set("location", e.target.value)}
-                  placeholder="Describa el punto exacto dentro de la estación"
-                />
-              </Field>
-            </div>
-
-            {/* Mini map / station preview */}
-            <div className="mt-5 rounded-xl bg-surface border border-line p-4">
-              <div className="flex items-center gap-2 text-[12px] text-ink-quiet mb-3">
-                <Train className="h-4 w-4 text-brand-700" />
-                <span>Recorrido Línea 1 — selección actual</span>
-              </div>
-              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
-                {STATIONS.map((s, i) => {
-                  const active = form.station === s;
-                  return (
-                    <div key={s} className="flex items-center shrink-0">
-                      <div
-                        className={cn(
-                          "px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all",
-                          active ? "bg-brand-700 text-white" : "bg-white border border-line text-ink-quiet"
-                        )}
-                      >
-                        {s}
+                      <div className={cn(
+                        "h-10 w-10 rounded-lg grid place-items-center shrink-0",
+                        active ? "bg-brand-700 text-white" : "bg-surface-2 text-ink-soft"
+                      )}>
+                        <opt.icon className="h-5 w-5" />
                       </div>
-                      {i < STATIONS.length - 1 && (
-                        <div className={cn("h-0.5 w-4", active ? "bg-brand-600" : "bg-line")} />
-                      )}
-                    </div>
+                      <div>
+                        <p className={cn("text-[13.5px] font-semibold", active ? "text-brand-900" : "text-ink")}>{opt.label}</p>
+                        <p className="text-[11px] text-ink-quiet mt-0.5">{opt.hint}</p>
+                      </div>
+                    </button>
                   );
                 })}
               </div>
-            </div>
-          </StepCard>
-        )}
+            </StepBox>
+          )}
 
-        {step === 2 && (
-          <StepCard
-            eyebrow="Paso 3"
-            title="Describa la situación"
-            description="Cuanto más contexto aporte, más ágil será la gestión por Seguridad Operativa."
-          >
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Field label="Fecha del evento" required>
-                <div className="relative">
-                  <Input type="date" value={form.date} onChange={(e) => set("date", e.target.value)} />
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-faint pointer-events-none" />
+          {/* Paso 2 — Ubicación */}
+          {step === 1 && (
+            <StepBox title="¿Dónde ocurrió?" subtitle="Indica la estación y el lugar específico (opcional).">
+              <Field label="Estación" required>
+                <Select value={form.station} onChange={(e) => set("station", e.target.value)}>
+                  <option value="">Selecciona una estación…</option>
+                  {STATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </Select>
+              </Field>
+              <div className="mt-4">
+                <p className="text-[12px] font-medium text-ink-soft mb-2">Lugar específico (opcional)</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {LOCATIONS.map((loc) => {
+                    const active = form.location === loc.value;
+                    return (
+                      <button
+                        key={loc.value}
+                        onClick={() => set("location", form.location === loc.value ? "" : loc.value)}
+                        className={cn(
+                          "p-3 rounded-lg border text-left transition-all flex items-center gap-2.5",
+                          active ? "border-brand-600 bg-brand-50 ring-1 ring-brand-200" : "border-line bg-white hover:border-line-strong hover:bg-surface/50"
+                        )}
+                      >
+                        <loc.icon className={cn("h-4.5 w-4.5", active ? "text-brand-700" : "text-ink-faint")} />
+                        <span className={cn("text-[12.5px] font-medium", active ? "text-brand-900" : "text-ink")}>{loc.value}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              </Field>
-              <Field label="Hora del evento" required>
-                <div className="relative">
-                  <Input type="time" value={form.time} onChange={(e) => set("time", e.target.value)} />
-                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-faint pointer-events-none" />
-                </div>
-              </Field>
-              <Field label="Título breve" className="sm:col-span-2" hint="Opcional — se sugiere automáticamente si lo deja vacío">
-                <Input
-                  value={form.title}
-                  onChange={(e) => set("title", e.target.value)}
-                  placeholder="Ej. Resbalón en plataforma sur por humedad"
-                  maxLength={90}
-                />
-              </Field>
-              <Field label="Descripción detallada" required className="sm:col-span-2" hint={`${form.description.length} caracteres · mínimo 10`}>
+              </div>
+            </StepBox>
+          )}
+
+          {/* Paso 3 — Descripción */}
+          {step === 2 && (
+            <StepBox title="Cuéntanos brevemente qué ocurrió" subtitle="Solo describe lo que observaste.">
+              <Field label="Descripción" required hint={`${form.description.length}/300 caracteres`}>
                 <Textarea
                   value={form.description}
-                  onChange={(e) => set("description", e.target.value)}
-                  placeholder="¿Qué ocurrió? ¿Qué condiciones estaban presentes? ¿Hubo personas involucradas?"
+                  onChange={(e) => set("description", e.target.value.slice(0, 300))}
+                  placeholder="Describe brevemente lo que observaste."
                   rows={5}
                 />
               </Field>
-              <Field label="Observaciones adicionales" className="sm:col-span-2">
-                <Textarea
-                  value={form.observations}
-                  onChange={(e) => set("observations", e.target.value)}
-                  placeholder="Cualquier información complementaria que ayude al análisis…"
-                  rows={3}
-                />
-              </Field>
-              <Field label="Prioridad sugerida" className="sm:col-span-2">
-                <div className="flex gap-2 flex-wrap">
-                  {(["critica", "alta", "media", "baja"] as Priority[]).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => set("priority", p)}
-                      className={cn(
-                        "px-3.5 h-10 rounded-lg text-[12.5px] font-medium border transition-all flex items-center gap-2",
-                        form.priority === p
-                          ? p === "critica"
-                            ? "border-critical bg-critical-soft text-critical-ink"
-                            : p === "alta"
-                            ? "border-warning bg-warning-soft text-warning-ink"
-                            : p === "media"
-                            ? "border-info bg-info-soft text-info-ink"
-                            : "border-line-strong bg-surface-2 text-ink"
-                          : "border-line bg-white text-ink-soft hover:bg-surface/50"
-                      )}
-                    >
-                      <span className={cn("h-2 w-2 rounded-full", p === "critica" ? "bg-critical" : p === "alta" ? "bg-warning" : p === "media" ? "bg-info" : "bg-ink-faint")} />
-                      {PRIORITY_LABELS[p]}
-                    </button>
+              <div className="mt-4 rounded-lg bg-info-soft border border-info/20 p-3.5 flex items-start gap-2.5">
+                <Info className="h-4 w-4 text-info-ink shrink-0 mt-0.5" />
+                <p className="text-[12.5px] text-info-ink leading-relaxed">
+                  No es necesario identificar responsables ni conocer las causas. Solo describe lo que observaste y el equipo de Seguridad Operativa realizará la evaluación correspondiente.
+                </p>
+              </div>
+            </StepBox>
+          )}
+
+          {/* Paso 4 — Evidencias */}
+          {step === 3 && (
+            <StepBox title="¿Deseas adjuntar evidencias?" subtitle="Fotografías o video. Es opcional.">
+              <div className="rounded-xl border-2 border-dashed border-line-strong bg-surface/40 p-8 text-center">
+                <div className="h-12 w-12 rounded-xl bg-white border border-line grid place-items-center text-brand-700 mx-auto">
+                  <Upload className="h-5 w-5" />
+                </div>
+                <p className="mt-3 text-[13.5px] font-medium text-ink">Arrastra archivos o adjunta desde tu equipo</p>
+                <p className="text-[12px] text-ink-quiet mt-1">JPG, PNG, MP4 · opcional</p>
+                <div className="mt-5 flex items-center justify-center gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={() => addMockEvidence("foto")}>
+                    <ImageIcon className="h-4 w-4" /> Adjuntar foto
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => addMockEvidence("video")}>
+                    <Video className="h-4 w-4" /> Adjuntar video
+                  </Button>
+                </div>
+              </div>
+
+              {form.evidence.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {form.evidence.map((ev) => (
+                    <div key={ev.id} className="flex items-center gap-3 p-3 rounded-lg bg-white border border-line">
+                      <div className="h-9 w-9 rounded-lg bg-surface-2 text-ink-soft grid place-items-center shrink-0">
+                        {ev.kind === "foto" ? <ImageIcon className="h-4 w-4" /> : ev.kind === "video" ? <Video className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12.5px] font-medium text-ink truncate">{ev.name}</p>
+                        <p className="text-[11px] text-ink-quiet">{ev.size}</p>
+                      </div>
+                      <button onClick={() => removeEvidence(ev.id)} className="h-8 w-8 grid place-items-center rounded-md text-ink-faint hover:bg-surface-2 hover:text-critical transition-colors">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   ))}
                 </div>
-              </Field>
-            </div>
-          </StepCard>
-        )}
+              )}
+            </StepBox>
+          )}
 
-        {step === 3 && (
-          <StepCard
-            eyebrow="Paso 4"
-            title="Adjunte evidencias"
-            description="Fotografías, videos o documentos que respalden el reporte. Opcional pero altamente recomendado."
-          >
-            <div className="rounded-xl border-2 border-dashed border-line-strong bg-surface/50 p-8 text-center">
-              <div className="h-12 w-12 rounded-xl bg-white border border-line grid place-items-center text-brand-700 mx-auto">
-                <Upload className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-[13.5px] font-medium text-ink">Arrastre archivos o adjunte desde su equipo</p>
-              <p className="text-[12px] text-ink-quiet mt-1">JPG, PNG, MP4, PDF · hasta 25 MB por archivo</p>
-              <div className="mt-5 flex items-center justify-center gap-2 flex-wrap">
-                <Button variant="outline" size="sm" onClick={() => addMockEvidence("foto")}>
-                  <ImageIcon className="h-4 w-4" /> Simular foto
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => addMockEvidence("video")}>
-                  <Video className="h-4 w-4" /> Simular video
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => addMockEvidence("documento")}>
-                  <FileText className="h-4 w-4" /> Simular documento
-                </Button>
-              </div>
-            </div>
-
-            {form.evidence.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {form.evidence.map((ev) => (
-                  <div key={ev.id} className="flex items-center gap-3 p-3 rounded-lg bg-white border border-line">
-                    <div className="h-9 w-9 rounded-lg bg-surface-2 text-ink-soft grid place-items-center shrink-0">
-                      {ev.kind === "foto" ? <ImageIcon className="h-4 w-4" /> : ev.kind === "video" ? <Video className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12.5px] font-medium text-ink truncate">{ev.name}</p>
-                      <p className="text-[11px] text-ink-quiet">{ev.size}</p>
-                    </div>
-                    <button
-                      onClick={() => removeEvidence(ev.id)}
-                      className="h-8 w-8 grid place-items-center rounded-md text-ink-faint hover:bg-surface-2 hover:text-critical transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+          {/* Paso 5 — Confirmación y Privacidad */}
+          {step === 4 && (
+            <StepBox title="¿Cómo deseas enviar tu reporte?" subtitle="Elige la modalidad de envío.">
+              {/* Opciones de privacidad */}
+              <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                <button
+                  onClick={() => set("anonymous", true)}
+                  className={cn(
+                    "p-5 rounded-xl border text-left transition-all",
+                    form.anonymous ? "border-brand-600 bg-brand-50 ring-2 ring-brand-200" : "border-line bg-white hover:border-line-strong"
+                  )}
+                >
+                  <div className={cn("h-11 w-11 rounded-xl grid place-items-center", form.anonymous ? "bg-brand-700 text-white" : "bg-surface-2 text-ink-soft")}>
+                    <Lock className="h-5 w-5" />
                   </div>
-                ))}
+                  <p className="mt-3 text-[14px] font-bold text-ink">Reporte Anónimo</p>
+                  <p className="text-[12px] text-ink-soft mt-1 leading-relaxed">Tus datos personales permanecerán ocultos. El equipo de Seguridad Operativa únicamente visualizará la información del reporte.</p>
+                </button>
+
+                <button
+                  onClick={() => set("anonymous", false)}
+                  className={cn(
+                    "p-5 rounded-xl border text-left transition-all",
+                    !form.anonymous ? "border-brand-600 bg-brand-50 ring-2 ring-brand-200" : "border-line bg-white hover:border-line-strong"
+                  )}
+                >
+                  <div className={cn("h-11 w-11 rounded-xl grid place-items-center", !form.anonymous ? "bg-brand-700 text-white" : "bg-surface-2 text-ink-soft")}>
+                    <User className="h-5 w-5" />
+                  </div>
+                  <p className="mt-3 text-[14px] font-bold text-ink">Reporte Identificado</p>
+                  <p className="text-[12px] text-ink-soft mt-1 leading-relaxed">Tus datos podrán ser visualizados únicamente por el equipo de Seguridad Operativa en caso sea necesario contactarte para ampliar la información.</p>
+                </button>
               </div>
-            )}
-          </StepCard>
-        )}
 
-        {step === 4 && (
-          <StepCard
-            eyebrow="Paso 5"
-            title="Revise y envíe"
-            description="Verifique la información antes de registrar el caso. Al enviar, el sistema generará el código automáticamente."
-          >
-            <div className="rounded-xl bg-surface border border-line p-5">
-              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
-                <ReviewRow label="Tipo de evento" value={EVENT_LABELS[form.type as EventType]} />
-                <ReviewRow label="Prioridad" value={PRIORITY_LABELS[form.priority]} />
-                <ReviewRow label="Área" value={AREA_LABELS[form.area as Area]} />
-                <ReviewRow label="Estación" value={form.station} />
-                <ReviewRow label="Ubicación" value={form.location} />
-                <ReviewRow label="Fecha y hora" value={`${form.date} · ${form.time}`} />
-                <ReviewRow label="Título" value={form.title || `${EVENT_LABELS[form.type as EventType]} en ${form.station}`} full />
-                <ReviewRow label="Descripción" value={form.description} full />
-                {form.observations && <ReviewRow label="Observaciones" value={form.observations} full />}
-                <ReviewRow label="Evidencias" value={`${form.evidence.length} archivo(s)`} />
+              {/* Campos si es identificado */}
+              {!form.anonymous && (
+                <div className="grid sm:grid-cols-2 gap-4 mb-4 animate-[riseUp_0.25s_ease-out]">
+                  <Field label="Nombre Completo" required className="sm:col-span-2">
+                    <Input value={form.contactName} onChange={(e) => set("contactName", e.target.value)} placeholder="Tu nombre completo" />
+                  </Field>
+                  <Field label="Correo Electrónico (opcional)">
+                    <Input type="email" value={form.contactEmail} onChange={(e) => set("contactEmail", e.target.value)} placeholder="tucorreo@ejemplo.com" />
+                  </Field>
+                  <Field label="Teléfono (opcional)">
+                    <Input value={form.contactPhone} onChange={(e) => set("contactPhone", e.target.value)} placeholder="+51 999 888 777" />
+                  </Field>
+                </div>
+              )}
+
+              {/* Resumen */}
+              <div className="rounded-xl bg-surface border border-line p-4">
+                <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-ink-faint mb-3">Resumen del reporte</p>
+                <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2.5 text-[12.5px]">
+                  <SummaryRow label="Tipo de Reporte" value={form.type ? EVENT_LABELS[form.type as EventType] : "—"} />
+                  <SummaryRow label="Estación" value={form.station || "—"} />
+                  <SummaryRow label="Lugar" value={form.location || "—"} />
+                  <SummaryRow label="Descripción" value={form.description ? `${form.description.slice(0, 50)}…` : "—"} />
+                  <SummaryRow label="Evidencias" value={`${form.evidence.length} archivo(s)`} />
+                  <SummaryRow label="Modalidad" value={form.anonymous ? "Anónimo" : "Identificado"} />
+                </div>
               </div>
-            </div>
+            </StepBox>
+          )}
+        </Card>
 
-            <div className="mt-5 rounded-xl bg-brand-50 border border-brand-200 p-4 flex items-start gap-3">
-              <Sparkles className="h-5 w-5 text-brand-700 shrink-0 mt-0.5" />
-              <p className="text-[12.5px] text-brand-800">
-                Al enviar, el caso ingresa al sistema con estado <strong>Nuevo</strong> y notifica
-                automáticamente al área de Seguridad Operativa para iniciar la revisión.
-              </p>
-            </div>
-          </StepCard>
-        )}
-      </div>
-
-      {/* Wizard footer */}
-      <div className="mt-5 flex items-center justify-between gap-3">
-        <Button variant="ghost" onClick={back} disabled={step === 0}>
-          <ArrowLeft className="h-4 w-4" /> Atrás
-        </Button>
-        {step < STEPS.length - 1 ? (
-          <Button onClick={next} disabled={!canNext}>
-            Continuar <ArrowRight className="h-4 w-4" />
+        {/* Footer */}
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <Button variant="ghost" onClick={back} disabled={step === 0}>
+            <ArrowLeft className="h-4 w-4" /> Atrás
           </Button>
-        ) : (
-          <Button onClick={submit} disabled={!canNext}>
-            <Check className="h-4 w-4" /> Enviar reporte
-          </Button>
-        )}
+          {step < STEPS.length - 1 ? (
+            <Button onClick={next} disabled={!canNext}>
+              Continuar <ArrowRight className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button onClick={submit} disabled={!form.type || !form.station || form.description.trim().length < 10 || (!form.anonymous && !form.contactName.trim())}>
+              <Send className="h-4 w-4" /> Enviar Reporte
+            </Button>
+          )}
+        </div>
       </div>
     </ReportanteShell>
   );
 }
 
-function StepCard({
-  eyebrow,
-  title,
-  description,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
+function StepBox({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <Card className="animate-[riseUp_0.3s_ease-out]">
-      <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-brand-700">{eyebrow}</p>
-      <h2 className="mt-1 text-[19px] font-bold text-ink tracking-tight">{title}</h2>
-      <p className="text-[13px] text-ink-quiet mt-1 mb-5">{description}</p>
+    <div className="animate-[riseUp_0.3s_ease-out]">
+      <h2 className="text-[19px] font-bold text-ink tracking-tight">{title}</h2>
+      <p className="text-[13px] text-ink-quiet mt-1 mb-5">{subtitle}</p>
       {children}
-    </Card>
+    </div>
   );
 }
 
-function ReviewRow({ label, value, full }: { label: string; value: string; full?: boolean }) {
+function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className={cn(full && "sm:col-span-2")}>
-      <p className="text-[11px] font-medium tracking-wide uppercase text-ink-faint">{label}</p>
-      <p className="text-[13.5px] text-ink mt-1 leading-snug">{value || "—"}</p>
+    <div>
+      <p className="text-[10.5px] font-medium tracking-wide uppercase text-ink-faint">{label}</p>
+      <p className="text-[13px] text-ink font-medium mt-0.5 leading-snug">{value}</p>
     </div>
   );
 }

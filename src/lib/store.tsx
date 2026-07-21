@@ -117,6 +117,10 @@ export interface NewReportInput {
   priority: CaseFile["priority"];
   evidence: Evidence[];
   reporter: string;
+  anonymous?: boolean;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
 }
 
 interface EvaluationInput {
