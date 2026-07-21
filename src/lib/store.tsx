@@ -35,7 +35,7 @@ const CASES_KEY = "sigma_l1_cases_v4";
 const NOTIF_KEY = "sigma_l1_notif_v4";
 const ROLE_KEY = "sigma_l1_role_v1";
 const SEQ_KEY = "sigma_l1_seq_v4";
-const USERS_KEY = "sigma_l1_users_v1";
+const USERS_KEY = "sigma_l1_users_v2";
 const SYNC_KEY = "sigma_l1_sync_v1";
 
 function load<T>(key: string, fallback: T): T {
@@ -103,6 +103,25 @@ function loadNotifs(): Notification[] {
   const raw = load<Notification[] | null>(NOTIF_KEY, null);
   if (!raw || !Array.isArray(raw)) return SEED_NOTIFICATIONS;
   return raw;
+}
+
+function loadUsers(): User[] {
+  const raw = load<User[] | null>(USERS_KEY, null);
+  if (!raw || !Array.isArray(raw) || raw.length === 0) return SEED_USERS;
+  // Migrar usuarios viejos sin los campos nuevos
+  return raw.map((u) => ({
+    ...u,
+    dni: u.dni ?? "00000000",
+    laborState: u.laborState ?? "activo",
+    turno: u.turno ?? "mañana",
+    contractType: u.contractType ?? "indefinido",
+    sede: u.sede ?? "Centro de Control",
+    subarea: u.subarea ?? "General",
+    roles: u.roles ?? [{ role: u.userRole, assignedBy: "Sistema", assignedAt: u.hiredAt }],
+    workHistory: u.workHistory ?? [{ id: `wh_alta_${u.code}`, at: u.hiredAt, field: "alta", oldValue: "—", newValue: "Ingreso a la empresa", source: "excel" as const }],
+    activity: u.activity ?? [],
+    lastSyncBy: u.lastSyncBy ?? "Sistema",
+  }));
 }
 
 function save<T>(key: string, value: T) {
@@ -237,7 +256,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>(() => loadNotifs());
   const [role, setRoleState] = useState<Role | null>(() => load<Role | null>(ROLE_KEY, null));
   const [seq, setSeq] = useState<number>(() => load(SEQ_KEY, 15));
-  const [users, setUsers] = useState<User[]>(() => load<User[]>(USERS_KEY, SEED_USERS));
+  const [users, setUsers] = useState<User[]>(() => loadUsers());
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>(() => load<SyncLog[]>(SYNC_KEY, SEED_SYNC_LOGS));
 
   useEffect(() => save(CASES_KEY, cases), [cases]);
