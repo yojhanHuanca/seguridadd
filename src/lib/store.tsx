@@ -24,10 +24,10 @@ import {
 import { SEED_CASES, SEED_NOTIFICATIONS } from "./seed";
 import { caseCodeFromSeq, nowISO, uid } from "./utils";
 
-const CASES_KEY = "sigma_l1_cases_v3";
-const NOTIF_KEY = "sigma_l1_notif_v3";
+const CASES_KEY = "sigma_l1_cases_v4";
+const NOTIF_KEY = "sigma_l1_notif_v4";
 const ROLE_KEY = "sigma_l1_role_v1";
-const SEQ_KEY = "sigma_l1_seq_v3";
+const SEQ_KEY = "sigma_l1_seq_v4";
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -209,7 +209,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [cases, setCases] = useState<CaseFile[]>(() => loadCases());
   const [notifications, setNotifications] = useState<Notification[]>(() => loadNotifs());
   const [role, setRoleState] = useState<Role | null>(() => load<Role | null>(ROLE_KEY, null));
-  const [seq, setSeq] = useState<number>(() => load(SEQ_KEY, 14));
+  const [seq, setSeq] = useState<number>(() => load(SEQ_KEY, 15));
 
   useEffect(() => save(CASES_KEY, cases), [cases]);
   useEffect(() => save(NOTIF_KEY, notifications), [notifications]);
@@ -707,7 +707,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(SEQ_KEY);
     setCases(SEED_CASES);
     setNotifications(SEED_NOTIFICATIONS);
-    setSeq(14);
+    setSeq(15);
   }, []);
 
   const value: StoreValue = {
@@ -762,3 +762,4 @@ function nextStatusLabel(status?: ActionItem["status"]): string {
   if (status === "pendiente") return "pendiente";
   return "actualizada";
 }
+

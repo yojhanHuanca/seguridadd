@@ -54,12 +54,14 @@ export function JefeHome() {
   const s = useStore();
   const { cases, currentUser } = s;
 
-  // Casos asignados al jefe (mantenimiento, en ejecución o verificación)
+  // Casos asignados al jefe: cualquier caso en ejecucion/verificacion asignado a mantenimiento
+  // o cuyo assignee sea el jefe actual
   const myCases = useMemo(
     () => cases.filter(
-      (c) => c.assigneeArea === "mantenimiento" && (c.stage === "ejecucion" || c.stage === "verificacion")
+      (c) => (c.stage === "ejecucion" || c.stage === "verificacion") &&
+             (c.assigneeArea === "mantenimiento" || c.assignee === currentUser.name || c.area === "mantenimiento")
     ),
-    [cases]
+    [cases, currentUser.name]
   );
 
   const activeCase: CaseFile | undefined = myCases.find((c) => c.stage === "ejecucion") ?? myCases[0];
