@@ -4,6 +4,7 @@ import { Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { Modal } from "@/design-system/primitives/Modal";
 import { Button } from "@/design-system/primitives/Button";
 import { Input, Field } from "@/design-system/primitives/Input";
+import { useAdminStore } from "@/lib/adminStore";
 
 interface AdminGateProps {
   open: boolean;
@@ -15,10 +16,12 @@ export function AdminGate({ open, onClose, onSuccess }: AdminGateProps) {
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
   const [showCode, setShowCode] = useState(false);
+  const { authenticate } = useAdminStore();
   const navigate = useNavigate();
 
   const handleAccess = () => {
-    if (code === "ADMIN-SIGMA-2026") {
+    const ok = authenticate(code);
+    if (ok) {
       setError(false);
       setCode("");
       onSuccess();
