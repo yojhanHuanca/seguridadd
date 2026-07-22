@@ -23,6 +23,7 @@ import {
   type Role,
   type Stage,
   type SyncLog,
+  type SystemRole,
   type TimelineEvent,
   type User,
   type UserRole,
@@ -35,7 +36,7 @@ const CASES_KEY = "sigma_l1_cases_v4";
 const NOTIF_KEY = "sigma_l1_notif_v4";
 const ROLE_KEY = "sigma_l1_role_v1";
 const SEQ_KEY = "sigma_l1_seq_v4";
-const USERS_KEY = "sigma_l1_users_v2";
+const USERS_KEY = "sigma_l1_users_v3";
 const SYNC_KEY = "sigma_l1_sync_v1";
 
 function load<T>(key: string, fallback: T): T {
@@ -109,19 +110,29 @@ function loadUsers(): User[] {
   const raw = load<User[] | null>(USERS_KEY, null);
   if (!raw || !Array.isArray(raw) || raw.length === 0) return SEED_USERS;
   // Migrar usuarios viejos sin los campos nuevos
-  return raw.map((u) => ({
-    ...u,
-    dni: u.dni ?? "00000000",
-    laborState: u.laborState ?? "activo",
-    turno: u.turno ?? "mañana",
-    contractType: u.contractType ?? "indefinido",
-    sede: u.sede ?? "Centro de Control",
-    subarea: u.subarea ?? "General",
-    roles: u.roles ?? [{ role: u.userRole, assignedBy: "Sistema", assignedAt: u.hiredAt }],
-    workHistory: u.workHistory ?? [{ id: `wh_alta_${u.code}`, at: u.hiredAt, field: "alta", oldValue: "—", newValue: "Ingreso a la empresa", source: "excel" as const }],
-    activity: u.activity ?? [],
-    lastSyncBy: u.lastSyncBy ?? "Sistema",
-  }));
+  return raw.map((u) => {
+    const parts = (u.name ?? "").split(" ");
+    const firstName = u.firstName ?? parts[0] ?? "";
+    const lastName = u.lastName ?? parts.slice(1).join(" ") ?? "";
+    return {
+      ...u,
+      dni: u.dni ?? "00000000",
+      firstName,
+      lastName,
+      systemRole: u.systemRole ?? (u.userRole as SystemRole) ?? "consulta",
+      cargoType: u.cargoType ?? "tecnico",
+      laborState: u.laborState ?? "activo",
+      turno: u.turno ?? "mañana",
+      contractType: u.contractType ?? "indefinido",
+      sede: u.sede ?? "Centro de Control",
+      subarea: u.subarea ?? "General",
+      roles: u.roles ?? [{ role: (u.systemRole ?? "consulta") as SystemRole, assignedBy: "Sistema", assignedAt: u.hiredAt }],
+      workHistory: u.workHistory ?? [{ id: `wh_alta_${u.code}`, at: u.hiredAt, field: "alta", oldValue: "—", newValue: "Ingreso a la empresa", source: "excel" as const }],
+      activity: u.activity ?? [],
+      lastSyncBy: u.lastSyncBy ?? "Sistema",
+      lastAccessAt: u.lastAccessAt ?? new Date().toISOString(),
+    };
+  });
 }
 
 function save<T>(key: string, value: T) {
@@ -800,15 +811,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const byCode = new Map(prev.map((u) => [u.code, u]));
       // 1) Agregar nuevos
       const newUsers: User[] = NEW_USERS_FROM_EXCEL.map((nu) => {
-        const initials = nu.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+        const name = `${nu.firstName} ${nu.lastName}`;
+        const initials = (nu.firstName[0] + nu.lastName[0]).toUpperCase();
         const colorIdx = parseInt(nu.code.replace(/\D/g, "")) % 8;
+        const lastAccess = new Date();
         return {
           ...nu,
+          name,
+          role: nu.systemRole === "consulta" ? "reportante" as const : "seguridad" as const,
+          userRole: nu.systemRole,
           id: `usr_${nu.code.toLowerCase().replace(/-/g, "")}`,
           initials,
           lastSyncAt: now,
+          lastAccessAt: lastAccess.toISOString(),
           avatarColor: ["#14814a", "#2c7be0", "#d99520", "#8a6fd6", "#d23a2c", "#0f6b3e", "#5fb4d4", "#c79a3e"][colorIdx],
-          roles: [{ role: nu.userRole, assignedBy: "Sistema (Excel)", assignedAt: now }],
+          roles: [{ role: nu.systemRole, assignedBy: "Sistema (Excel)", assignedAt: now }],
           workHistory: [{ id: `wh_alta_${nu.code}`, at: now, field: "alta", oldValue: "—", newValue: "Nuevo ingreso desde Excel", source: "excel" as const }],
           activity: [{ id: `act_alta_${nu.code}`, at: now, type: "cambio" as const, title: "Alta de trabajador", detail: "Sincronizado desde Excel corporativo" }],
         };
@@ -840,8 +857,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return { newCount, updatedCount, deactivatedCount, durationSec };
   }, []);
 
-  const assignUserRole = useCallback((userId: string, userRole: UserRole) => {
-    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, userRole, role: userRole === "jefe_area" ? "jefe" : userRole === "consulta" ? "reportante" : "seguridad" } : u)));
+  const assignUserRole = useCallback((userId: string, userRole: SystemRole) => {
+    setUsers((prev) => prev.map((u) => (u.id === userId ? {
+      ...u,
+      userRole,
+      systemRole: userRole,
+      role: userRole === "consulta" ? "reportante" : "seguridad",
+      roles: [...u.roles, { role: userRole, assignedBy: SAFETY_USER.name, assignedAt: nowISO() }],
+    } : u)));
   }, []);
 
   const deactivateUser = useCallback((userId: string) => {

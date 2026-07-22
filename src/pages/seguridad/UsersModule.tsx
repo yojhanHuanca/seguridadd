@@ -16,9 +16,10 @@ import { Modal } from "@/design-system/primitives/Modal";
 import { Pill } from "@/design-system/primitives/Pill";
 import { Progress } from "@/design-system/primitives/Progress";
 import {
-  AREA_HEADS, AREA_LABELS, USER_ROLE_LABELS, USER_ROLE_DESCRIPTIONS, USER_ROLE_TONE,
+  AREA_HEADS, AREA_LABELS, CARGO_LABELS, SYSTEM_ROLE_LABELS, SYSTEM_ROLE_DESCRIPTIONS, SYSTEM_ROLE_TONE,
+  USER_ROLE_LABELS, USER_ROLE_TONE,
   LABOR_STATE_LABELS, LABOR_STATE_TONE, TURNO_LABELS, CONTRACT_LABELS,
-  type User, type UserRole, type LaborState, type Turno, type ContractType,
+  type User, type SystemRole, type Cargo, type LaborState, type Turno, type ContractType,
 } from "@/lib/types";
 import { cn, formatDate, formatDateTime, relativeTime } from "@/lib/utils";
 import {
@@ -97,10 +98,10 @@ function DashboardTab({ users, cases, onSync, syncing }: { users: User[]; cases:
   const stats = useMemo(() => {
     const active = users.filter((u) => u.laborState === "activo").length;
     const inactive = users.filter((u) => u.laborState === "baja_definitiva" || u.laborState === "baja_temporal").length;
-    const jefes = users.filter((u) => u.userRole === "jefe_area").length;
-    const analistas = users.filter((u) => u.userRole === "analista_so").length;
-    const supervisores = users.filter((u) => u.userRole === "supervisor").length;
-    const responsables = users.filter((u) => u.userRole === "responsable_plan").length;
+    const jefes = users.filter((u) => u.cargoType === "jefe_area").length;
+    const analistas = users.filter((u) => u.cargoType === "analista_so").length;
+    const supervisores = users.filter((u) => u.cargoType === "supervisor").length;
+    const responsables = users.filter((u) => u.systemRole === "seguridad_operativa").length;
     const bajados = users.filter((u) => u.laborState === "baja_definitiva").length;
     const withCases = users.filter((u) => cases.some((c) => c.assignee === u.name || c.reporter === u.name)).length;
     const withInvestigations = users.filter((u) => cases.some((c) => c.investigator === u.name)).length;
@@ -116,8 +117,14 @@ function DashboardTab({ users, cases, onSync, syncing }: { users: User[]; cases:
 
   const byRole = useMemo(() => {
     const map = new Map<string, number>();
-    users.forEach((u) => map.set(u.userRole, (map.get(u.userRole) ?? 0) + 1));
-    return Array.from(map.entries()).map(([role, value], i) => ({ name: USER_ROLE_LABELS[role as UserRole], value, color: PALETTE[i % PALETTE.length] }));
+    users.forEach((u) => map.set(u.systemRole, (map.get(u.systemRole) ?? 0) + 1));
+    return Array.from(map.entries()).map(([role, value], i) => ({ name: SYSTEM_ROLE_LABELS[role as SystemRole], value, color: PALETTE[i % PALETTE.length] }));
+  }, [users]);
+
+  const byCargo = useMemo(() => {
+    const map = new Map<string, number>();
+    users.forEach((u) => map.set(u.cargoType, (map.get(u.cargoType) ?? 0) + 1));
+    return Array.from(map.entries()).map(([cargo, value], i) => ({ name: CARGO_LABELS[cargo as Cargo], value, color: PALETTE[i % PALETTE.length] }));
   }, [users]);
 
   const byLaborState = useMemo(() => {
@@ -150,10 +157,10 @@ function DashboardTab({ users, cases, onSync, syncing }: { users: User[]; cases:
     { label: "Inactivos", value: stats.inactive, icon: UserX, tone: "neutral" as const },
     { label: "Nuevos sincronizados", value: 3, icon: UserPlus, tone: "info" as const },
     { label: "Áreas registradas", value: 8, icon: Building2, tone: "brand" as const },
-    { label: "Jefes de Área", value: stats.jefes, icon: Briefcase, tone: "warning" as const },
-    { label: "Analistas SO", value: stats.analistas, icon: ShieldCheck, tone: "brand" as const },
-    { label: "Supervisores", value: stats.supervisores, icon: Eye, tone: "info" as const },
-    { label: "Responsables de Plan", value: stats.responsables, icon: ClipboardList, tone: "brand" as const },
+    { label: "Jefes de Área (cargo)", value: stats.jefes, icon: Briefcase, tone: "warning" as const },
+    { label: "Analistas SO (cargo)", value: stats.analistas, icon: ShieldCheck, tone: "brand" as const },
+    { label: "Supervisores (cargo)", value: stats.supervisores, icon: Eye, tone: "info" as const },
+    { label: "Rol Seguridad Operativa", value: stats.responsables, icon: ClipboardList, tone: "brand" as const },
     { label: "Con investigaciones", value: stats.withInvestigations, icon: FileSearch, tone: "info" as const },
     { label: "Con casos activos", value: stats.withCases, icon: Activity, tone: "warning" as const },
     { label: "Con planes pendientes", value: stats.withPendingPlans, icon: Clock, tone: "warning" as const },
@@ -216,15 +223,15 @@ function DashboardTab({ users, cases, onSync, syncing }: { users: User[]; cases:
       {/* Gráficos fila 2 */}
       <div className="grid lg:grid-cols-3 gap-5">
         <Card>
-          <ChartHeader title="Distribución por cargo" subtitle="Roles asignados" />
+          <ChartHeader title="Distribución por cargo" subtitle="Cargos organizacionales" />
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={byRole} margin={{ top: 8, right: 8, left: -16, bottom: 0 }} barCategoryGap={14}>
+            <BarChart data={byCargo} margin={{ top: 8, right: 8, left: -16, bottom: 0 }} barCategoryGap={14}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART.surface} vertical={false} />
               <XAxis dataKey="name" tick={{ fill: CHART.inkFaint, fontSize: 9.5 }} tickLine={false} axisLine={false} dy={6} />
               <YAxis tick={{ fill: CHART.inkFaint, fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
               <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #e3e8e5", fontSize: 12 }} cursor={{ fill: CHART.surface, fillOpacity: 0.4 }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={26}>
-                {byRole.map((d, i) => <Cell key={i} fill={d.color} />)}
+                {byCargo.map((d, i) => <Cell key={i} fill={d.color} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -316,7 +323,7 @@ function PersonalTab({ users, cases, onSelectUser }: { users: User[]; cases: imp
     let list = users;
     if (areaFilter) list = list.filter((u) => u.area === areaFilter);
     if (statusFilter) list = list.filter((u) => u.laborState === statusFilter);
-    if (roleFilter) list = list.filter((u) => u.userRole === roleFilter);
+    if (roleFilter) list = list.filter((u) => u.systemRole === roleFilter);
     if (turnoFilter) list = list.filter((u) => u.turno === turnoFilter);
     if (contractFilter) list = list.filter((u) => u.contractType === contractFilter);
     if (sedeFilter) list = list.filter((u) => u.sede === sedeFilter);
@@ -338,7 +345,7 @@ function PersonalTab({ users, cases, onSelectUser }: { users: User[]; cases: imp
 
   const exportCSV = () => {
     const headers = ["Código", "DNI", "Nombre", "Cargo", "Área", "Sede", "Correo", "Teléfono", "Turno", "Estado", "Rol", "Contrato", "Ingreso"];
-    const rows = filtered.map((u) => [u.code, u.dni, u.name, u.cargo, u.area ? AREA_LABELS[u.area] : "", u.sede, u.email, u.phone ?? "", TURNO_LABELS[u.turno], LABOR_STATE_LABELS[u.laborState], USER_ROLE_LABELS[u.userRole], CONTRACT_LABELS[u.contractType], u.hiredAt]);
+    const rows = filtered.map((u) => [u.code, u.dni, u.name, u.cargo, u.area ? AREA_LABELS[u.area] : "", u.sede, u.email, u.phone ?? "", TURNO_LABELS[u.turno], LABOR_STATE_LABELS[u.laborState], SYSTEM_ROLE_LABELS[u.systemRole], CONTRACT_LABELS[u.contractType], u.hiredAt]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -348,7 +355,7 @@ function PersonalTab({ users, cases, onSelectUser }: { users: User[]; cases: imp
 
   const exportPDF = () => {
     const w = window.open("", "_blank"); if (!w) return;
-    const rows = filtered.map((u, i) => `<tr><td>${i + 1}</td><td>${u.code}</td><td>${u.name}</td><td>${u.cargo}</td><td>${u.area ? AREA_LABELS[u.area] : ""}</td><td>${LABOR_STATE_LABELS[u.laborState]}</td><td>${USER_ROLE_LABELS[u.userRole]}</td></tr>`).join("");
+    const rows = filtered.map((u, i) => `<tr><td>${i + 1}</td><td>${u.code}</td><td>${u.name}</td><td>${u.cargo}</td><td>${u.area ? AREA_LABELS[u.area] : ""}</td><td>${LABOR_STATE_LABELS[u.laborState]}</td><td>${SYSTEM_ROLE_LABELS[u.systemRole]}</td></tr>`).join("");
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Personal SIGMA L1</title><style>body{font-family:Inter,sans-serif;margin:40px;color:#182621}h1{color:#0F6B3E;border-bottom:3px solid #14814a;padding-bottom:10px}table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:20px}th,td{border:1px solid #e3e8e5;padding:6px 8px;text-align:left}th{background:#f6f8f7;color:#41504a}</style></head><body><h1>Personal SIGMA L1 — Línea 1 Metro de Lima</h1><p>Fecha: ${formatDateTime(new Date().toISOString())} · ${filtered.length} trabajadores</p><table><thead><tr><th>#</th><th>Código</th><th>Nombre</th><th>Cargo</th><th>Área</th><th>Estado</th><th>Rol</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
     w.document.close(); setTimeout(() => w.print(), 300);
   };
@@ -376,7 +383,7 @@ function PersonalTab({ users, cases, onSelectUser }: { users: User[]; cases: imp
           <div className="grid sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <FilterSelect label="Área" value={areaFilter} onChange={setAreaFilter} options={[{ v: "", l: "Todas" }, ...Object.entries(AREA_LABELS).map(([v, l]) => ({ v, l }))]} />
             <FilterSelect label="Estado laboral" value={statusFilter} onChange={setStatusFilter} options={[{ v: "", l: "Todos" }, ...Object.entries(LABOR_STATE_LABELS).map(([v, l]) => ({ v, l }))]} />
-            <FilterSelect label="Rol" value={roleFilter} onChange={setRoleFilter} options={[{ v: "", l: "Todos" }, ...Object.entries(USER_ROLE_LABELS).map(([v, l]) => ({ v, l }))]} />
+            <FilterSelect label="Rol del Sistema" value={roleFilter} onChange={setRoleFilter} options={[{ v: "", l: "Todos" }, ...Object.entries(SYSTEM_ROLE_LABELS).map(([v, l]) => ({ v, l }))]} />
             <FilterSelect label="Turno" value={turnoFilter} onChange={setTurnoFilter} options={[{ v: "", l: "Todos" }, ...Object.entries(TURNO_LABELS).map(([v, l]) => ({ v, l }))]} />
             <FilterSelect label="Contrato" value={contractFilter} onChange={setContractFilter} options={[{ v: "", l: "Todos" }, ...Object.entries(CONTRACT_LABELS).map(([v, l]) => ({ v, l }))]} />
             <FilterSelect label="Sede" value={sedeFilter} onChange={setSedeFilter} options={[{ v: "", l: "Todas" }, ...Array.from(new Set(users.map((u) => u.sede))).map((s) => ({ v: s, l: s }))]} />
@@ -397,19 +404,13 @@ function PersonalTab({ users, cases, onSelectUser }: { users: User[]; cases: imp
               <tr className="bg-surface/60 border-b border-line text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
                 <th className="px-3 py-3 w-[52px]">Foto</th>
                 <SortHeader label="Código" k="code" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="w-[100px]" />
-                <th className="px-3 py-3 w-[90px]">DNI</th>
-                <SortHeader label="Nombre" k="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="min-w-[160px]" />
+                <SortHeader label="Nombre Completo" k="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="min-w-[180px]" />
                 <SortHeader label="Cargo" k="cargo" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="w-[170px]" />
                 <SortHeader label="Área" k="area" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="w-[130px]" />
-                <th className="px-3 py-3 w-[120px]">Jefe inmediato</th>
-                <th className="px-3 py-3 w-[180px]">Correo</th>
-                <th className="px-3 py-3 w-[80px]">Turno</th>
+                <th className="px-3 py-3 w-[140px]">Rol del Sistema</th>
                 <th className="px-3 py-3 w-[100px]">Estado</th>
-                <th className="px-3 py-3 w-[60px] text-center">Casos</th>
-                <th className="px-3 py-3 w-[60px] text-center">Inv.</th>
-                <th className="px-3 py-3 w-[60px] text-center">Planes</th>
-                <th className="px-3 py-3 w-[100px]">Últ. sync</th>
-                <th className="px-3 py-3 w-[80px] text-right">Acción</th>
+                <th className="px-3 py-3 w-[110px]">Últ. Acceso</th>
+                <th className="px-3 py-3 w-[120px] text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line-soft">
@@ -424,23 +425,21 @@ function PersonalTab({ users, cases, onSelectUser }: { users: User[]; cases: imp
                       <div className="h-8 w-8 rounded-full grid place-items-center text-white text-[10px] font-semibold shrink-0" style={{ background: u.avatarColor ?? "#14814a" }}>{u.initials}</div>
                     </td>
                     <td className="px-3 py-3"><span className="font-mono text-[11.5px] font-semibold text-brand-700">{u.code}</span></td>
-                    <td className="px-3 py-3"><span className="text-[11.5px] text-ink-soft tabular-nums">{u.dni}</span></td>
                     <td className="px-3 py-3 max-w-[180px]">
                       <p className="text-[12.5px] font-semibold text-ink truncate">{u.name}</p>
-                      <p className="text-[10.5px] text-ink-quiet mt-0.5">{USER_ROLE_LABELS[u.userRole]}</p>
+                      <p className="text-[10.5px] text-ink-quiet mt-0.5">DNI {u.dni}</p>
                     </td>
                     <td className="px-3 py-3"><span className="text-[12px] text-ink-soft">{u.cargo}</span></td>
                     <td className="px-3 py-3"><span className="text-[12px] text-ink-soft">{u.area ? AREA_LABELS[u.area] : "—"}</span></td>
-                    <td className="px-3 py-3"><span className="text-[11.5px] text-ink-soft truncate block max-w-[110px]">{u.area ? AREA_HEADS[u.area] : "—"}</span></td>
-                    <td className="px-3 py-3"><span className="text-[11.5px] text-ink-soft truncate block max-w-[170px]">{u.email}</span></td>
-                    <td className="px-3 py-3"><span className="text-[11.5px] text-ink-soft">{TURNO_LABELS[u.turno]}</span></td>
+                    <td className="px-3 py-3"><Pill tone={SYSTEM_ROLE_TONE[u.systemRole]} dot>{SYSTEM_ROLE_LABELS[u.systemRole]}</Pill></td>
                     <td className="px-3 py-3"><Pill tone={LABOR_STATE_TONE[u.laborState]} dot>{LABOR_STATE_LABELS[u.laborState]}</Pill></td>
-                    <td className="px-3 py-3 text-center"><span className="text-[12px] tabular-nums font-semibold text-ink">{openCases}</span></td>
-                    <td className="px-3 py-3 text-center"><span className="text-[12px] tabular-nums font-semibold text-ink">{investigations}</span></td>
-                    <td className="px-3 py-3 text-center"><span className="text-[12px] tabular-nums font-semibold text-ink">{pendingPlans}</span></td>
-                    <td className="px-3 py-3"><span className="text-[11px] text-ink-quiet">{formatDate(u.lastSyncAt)}</span></td>
+                    <td className="px-3 py-3"><span className="text-[11px] text-ink-quiet">{u.lastAccessAt ? relativeTime(u.lastAccessAt) : "—"}</span></td>
                     <td className="px-3 py-3 text-right">
-                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onSelectUser(u); }}>Ficha <ChevronRight className="h-3.5 w-3.5" /></Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onSelectUser(u); }}><Eye className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onSelectUser(u); }} className="text-ink-soft"><FileText className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); }} className="text-critical hover:bg-critical-soft"><UserX className="h-3.5 w-3.5" /></Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -661,13 +660,17 @@ function InfoTab({ user, antiguedadYears, antiguedadMonths }: { user: User; anti
   );
 }
 
-function RolesTab({ user, onAssignRole }: { user: User; onAssignRole: (r: UserRole) => void }) {
+function RolesTab({ user, onAssignRole }: { user: User; onAssignRole: (r: SystemRole) => void }) {
   return (
     <Card className="p-5">
-      <h3 className="text-[15px] font-bold text-ink mb-4">Roles y Permisos</h3>
+      <h3 className="text-[15px] font-bold text-ink mb-4">Roles del Sistema y Permisos</h3>
+      <div className="rounded-lg bg-info-soft border border-info/20 p-3 mb-4 flex items-start gap-2.5">
+        <Info className="h-4 w-4 text-info-ink shrink-0 mt-0.5" />
+        <p className="text-[12px] text-info-ink">Los roles del sistema controlan los permisos de acceso a la plataforma. El cargo organizacional se gestiona por separado.</p>
+      </div>
       <div className="space-y-2.5">
-        {(Object.keys(USER_ROLE_LABELS) as UserRole[]).map((role) => {
-          const assigned = user.roles.some((r) => r.role === role);
+        {(Object.keys(SYSTEM_ROLE_LABELS) as SystemRole[]).map((role) => {
+          const assigned = user.systemRole === role;
           const assignment = user.roles.find((r) => r.role === role);
           return (
             <div key={role} className={cn("rounded-xl border p-4 flex items-start justify-between gap-3", assigned ? "border-brand-200 bg-brand-50/40" : "border-line bg-white")}>
@@ -677,10 +680,10 @@ function RolesTab({ user, onAssignRole }: { user: User; onAssignRole: (r: UserRo
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-[13.5px] font-semibold text-ink">{USER_ROLE_LABELS[role]}</p>
-                    {assigned && <Pill tone={USER_ROLE_TONE[role]} dot>Asignado</Pill>}
+                    <p className="text-[13.5px] font-semibold text-ink">{SYSTEM_ROLE_LABELS[role]}</p>
+                    {assigned && <Pill tone={SYSTEM_ROLE_TONE[role]} dot>Asignado</Pill>}
                   </div>
-                  <p className="text-[12px] text-ink-soft mt-1 leading-relaxed">{USER_ROLE_DESCRIPTIONS[role]}</p>
+                  <p className="text-[12px] text-ink-soft mt-1 leading-relaxed">{SYSTEM_ROLE_DESCRIPTIONS[role]}</p>
                   {assignment && (
                     <p className="text-[11px] text-ink-faint mt-1.5">Asignado por {assignment.assignedBy} · {formatDate(assignment.assignedAt)}</p>
                   )}
@@ -1023,3 +1026,4 @@ function ResultRow({ icon, label, value, tone }: { icon: React.ReactNode; label:
     </div>
   );
 }
+

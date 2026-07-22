@@ -190,37 +190,58 @@ export interface Notification {
   kind: "info" | "warning" | "critical" | "success";
 }
 
-export type UserRole =
-  | "administrador"
-  | "analista_so"
-  | "supervisor"
+// ─── Catálogo de Cargos (estructura organizacional) ───
+export type Cargo =
+  | "gerente"
   | "jefe_area"
-  | "responsable_plan"
-  | "consulta"
-  | "auditor"
-  | "investigador";
+  | "supervisor"
+  | "analista_so"
+  | "tecnico"
+  | "inspector"
+  | "operador"
+  | "auditor";
 
-export const USER_ROLE_LABELS: Record<UserRole, string> = {
-  administrador: "Administrador",
-  analista_so: "Analista Seguridad Operativa",
-  supervisor: "Supervisor",
+export const CARGO_LABELS: Record<Cargo, string> = {
+  gerente: "Gerente",
   jefe_area: "Jefe de Área",
-  responsable_plan: "Responsable del Plan",
-  consulta: "Consulta",
+  supervisor: "Supervisor",
+  analista_so: "Analista de Seguridad Operativa",
+  tecnico: "Técnico",
+  inspector: "Inspector",
+  operador: "Operador",
   auditor: "Auditor",
-  investigador: "Investigador",
 };
 
-export const USER_ROLE_DESCRIPTIONS: Record<UserRole, string> = {
-  administrador: "Acceso total al sistema, gestión de usuarios y configuración",
-  analista_so: "Gestión de casos, investigación y elaboración de planes de acción",
-  supervisor: "Supervisión operativa y seguimiento de actividades del área",
-  jefe_area: "Ejecución de planes de acción y gestión de su área responsable",
-  responsable_plan: "Responsable del cumplimiento de actividades específicas del plan",
-  consulta: "Acceso de solo lectura a expedientes y reportes",
-  auditor: "Revisión de cumplimiento, auditorías y trazabilidad de procesos",
-  investigador: "Conducción de investigaciones de seguridad operativa",
+// ─── Roles del Sistema (permisos de acceso) ───
+// Solo 4 roles: controlan qué puede hacer el usuario en la plataforma
+export type SystemRole = "administrador" | "seguridad_operativa" | "auditor" | "consulta";
+
+export const SYSTEM_ROLE_LABELS: Record<SystemRole, string> = {
+  administrador: "Administrador",
+  seguridad_operativa: "Seguridad Operativa",
+  auditor: "Auditor",
+  consulta: "Consulta",
 };
+
+export const SYSTEM_ROLE_DESCRIPTIONS: Record<SystemRole, string> = {
+  administrador: "Acceso total al sistema, gestión de usuarios, sincronización y configuración",
+  seguridad_operativa: "Gestión de casos, investigación, planes de acción y cierre del expediente",
+  auditor: "Revisión de cumplimiento, auditorías y trazabilidad de procesos (solo lectura)",
+  consulta: "Acceso de solo lectura a expedientes y reportes",
+};
+
+export const SYSTEM_ROLE_TONE: Record<SystemRole, "critical" | "brand" | "info" | "neutral"> = {
+  administrador: "critical",
+  seguridad_operativa: "brand",
+  auditor: "info",
+  consulta: "neutral",
+};
+
+// Mantener compatibilidad hacia atrás (UserRole se mantiene para no romper otros módulos)
+export type UserRole = SystemRole;
+export const USER_ROLE_LABELS = SYSTEM_ROLE_LABELS;
+export const USER_ROLE_DESCRIPTIONS = SYSTEM_ROLE_DESCRIPTIONS;
+export const USER_ROLE_TONE = SYSTEM_ROLE_TONE;
 
 export type LaborState = "activo" | "vacaciones" | "licencia" | "suspendido" | "baja_temporal" | "baja_definitiva";
 
@@ -278,7 +299,7 @@ export interface UserActivity {
 }
 
 export interface RoleAssignment {
-  role: UserRole;
+  role: SystemRole;
   assignedBy: string;
   assignedAt: string;
 }
@@ -308,13 +329,17 @@ export interface User {
   id: string;
   code: string; // Código del trabajador (EMP-0001)
   dni: string; // DNI del trabajador
-  name: string;
-  role: Role;
-  userRole: UserRole;
+  firstName: string; // Nombres
+  lastName: string; // Apellidos
+  name: string; // Nombre completo (computed: firstName + lastName)
+  role: Role; // Role interno del prototipo (reportante/seguridad/jefe)
+  userRole: SystemRole; // Mantener compatibilidad
+  systemRole: SystemRole; // Rol del sistema (permisos)
   roles: RoleAssignment[]; // roles asignados con historial
   area?: Area;
   subarea?: string;
-  cargo: string;
+  cargo: string; // Cargo como texto libre (compatibilidad)
+  cargoType: Cargo; // Cargo del catálogo organizacional
   email: string;
   phone?: string;
   initials: string;
@@ -327,6 +352,7 @@ export interface User {
   hiredAt: string; // Fecha de ingreso
   lastSyncAt: string; // Última sincronización
   lastSyncBy: string; // Usuario que realizó la última sincronización
+  lastAccessAt?: string; // Último acceso al sistema
   avatarColor?: string;
   workHistory: WorkHistoryEntry[];
   activity: UserActivity[];
@@ -362,17 +388,6 @@ export interface SyncLog {
   durationSec: number;
   status: "completada" | "en_proceso";
 }
-
-export const USER_ROLE_TONE: Record<UserRole, "brand" | "info" | "warning" | "neutral" | "critical" | "success"> = {
-  administrador: "critical",
-  analista_so: "brand",
-  supervisor: "info",
-  jefe_area: "warning",
-  responsable_plan: "success",
-  consulta: "neutral",
-  auditor: "info",
-  investigador: "brand",
-};
 
 export const STATIONS: string[] = [
   "San Juan",
