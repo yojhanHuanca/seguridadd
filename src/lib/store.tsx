@@ -175,6 +175,7 @@ export interface NewReportInput {
 
 interface EvaluationInput {
   gravity: "critica" | "alta" | "media" | "baja";
+  riskLevel: RiskLevel;
   classification: string;
   requiresInvestigation: boolean;
   observations: string;
@@ -435,12 +436,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (caseId: string, ev: EvaluationInput) => {
       mutate(caseId, (c) =>
         pushTimeline(
-          { ...c, stage: ev.requiresInvestigation ? "investigacion" : "plan_accion", priority: ev.gravity, evaluation: { ...ev, updatedAt: nowISO() } },
+          { ...c, stage: ev.requiresInvestigation ? "investigacion" : "plan_accion", priority: ev.gravity, riskLevel: ev.riskLevel, evaluation: { ...ev, updatedAt: nowISO() } },
           {
             kind: "comentario",
             actor: SAFETY_USER.name,
             actorRole: "seguridad",
-            title: `Evaluación registrada — gravedad ${ev.gravity}`,
+            title: `Evaluación registrada — riesgo ${ev.riskLevel}`,
             detail: `Clasificación: ${ev.classification}. Requiere investigación: ${ev.requiresInvestigation ? "Sí" : "No"}.${ev.observations ? ` Obs: ${ev.observations}` : ""}`,
           }
         )

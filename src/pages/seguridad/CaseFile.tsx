@@ -59,6 +59,7 @@ import {
   LABOR_STATE_LABELS,
   PRIORITY_LABELS,
   RISK_LABELS,
+  riskToPriority,
   TIPO_SOP_LABELS,
   SUBTIPO_SOP_LABELS,
   PROCEDENCIA_LABELS,
@@ -460,37 +461,32 @@ function ReceptionStage({ c, store }: { c: Store["cases"][number]; store: Store 
 
 /* ─── ETAPA 2 — Evaluación ─── */
 function EvaluationForm({ c, store }: { c: Store["cases"][number]; store: Store }) {
-  const [gravity, setGravity] = useState<Priority>(c.priority);
+  const [riskLevel, setRiskLevel] = useState<RiskLevel>(c.riskLevel);
   const [classification, setClassification] = useState(c.evaluation?.classification ?? "");
   const [requiresInvestigation, setRequiresInvestigation] = useState(c.evaluation?.requiresInvestigation ?? true);
   const [observations, setObservations] = useState(c.evaluation?.observations ?? "");
 
   const canSave = classification.trim().length > 0;
+  const gravityFromRisk = riskToPriority(riskLevel);
 
   return (
     <div className="space-y-4">
       <div className="rounded-lg bg-info-soft border border-info/20 p-3.5 flex items-start gap-2.5">
         <FileSearch className="h-4 w-4 text-info-ink shrink-0 mt-0.5" />
         <p className="text-[12.5px] text-info-ink">
-          <span className="font-semibold">Análisis del caso.</span> Defina la gravedad, clasificación y si requiere investigación. Al guardar, el caso pasa a Investigación o directamente a Plan de Acción.
+          <span className="font-semibold">Análisis del caso.</span> Defina el análisis de riesgo (matriz 1A-4E), clasificación y si requiere investigación. Al guardar, el caso pasa a Investigación o directamente a Plan de Acción.
         </p>
       </div>
 
-      <Field label="Gravedad del caso" required>
-        <div className="flex gap-2 flex-wrap">
-          {(["critica", "alta", "media", "baja"] as Priority[]).map((p) => (
-            <button key={p} onClick={() => setGravity(p)}
-              className={cn("px-3.5 h-10 rounded-lg text-[12.5px] font-medium border transition-all flex items-center gap-2",
-                gravity === p
-                  ? p === "critica" ? "border-critical bg-critical-soft text-critical-ink"
-                  : p === "alta" ? "border-warning bg-warning-soft text-warning-ink"
-                  : p === "media" ? "border-info bg-info-soft text-info-ink"
-                  : "border-line-strong bg-surface-2 text-ink"
-                  : "border-line bg-white text-ink-soft hover:bg-surface/50")}>
-              <span className={cn("h-2 w-2 rounded-full", p === "critica" ? "bg-critical" : p === "alta" ? "bg-warning" : p === "media" ? "bg-info" : "bg-ink-faint")} />
-              {PRIORITY_LABELS[p]}
-            </button>
+      <Field label="Análisis de riesgo (matriz 5×5)" required>
+        <Select value={riskLevel} onChange={(e) => setRiskLevel(e.target.value as RiskLevel)}>
+          {(Object.keys(RISK_LABELS) as RiskLevel[]).map((r) => (
+            <option key={r} value={r}>{RISK_LABELS[r]}</option>
           ))}
+        </Select>
+        <div className="mt-2 flex items-center gap-2">
+          <RiskPill risk={riskLevel} showCategory />
+          <span className="text-[11px] text-ink-quiet">Gravedad derivada: {PRIORITY_LABELS[gravityFromRisk]}</span>
         </div>
       </Field>
 
@@ -516,7 +512,7 @@ function EvaluationForm({ c, store }: { c: Store["cases"][number]; store: Store 
       </Field>
 
       <div className="pt-3 border-t border-line-soft flex items-center justify-end gap-2">
-        <Button size="sm" disabled={!canSave} onClick={() => store.saveEvaluation(c.id, { gravity, classification: classification.trim(), requiresInvestigation, observations: observations.trim() })}>
+        <Button size="sm" disabled={!canSave} onClick={() => store.saveEvaluation(c.id, { gravity: gravityFromRisk, riskLevel, classification: classification.trim(), requiresInvestigation, observations: observations.trim() })}>
           <Check className="h-4 w-4" /> {requiresInvestigation ? "Guardar y pasar a Investigación" : "Guardar y pasar a Plan de Acción"}
         </Button>
       </div>
@@ -593,9 +589,6 @@ function InvestigationStage({ c, store }: { c: Store["cases"][number]; store: St
           </Field>
           <Field label="Causa raíz" required>
             <Textarea value={inv.rootCause} onChange={(e) => set("rootCause", e.target.value)} placeholder="¿Cuál es la causa originaria del evento?" rows={2} />
-          </Field>
-          <Field label="Análisis técnico">
-            <Textarea value={inv.technicalDescription} onChange={(e) => set("technicalDescription", e.target.value)} placeholder="Detalle técnico: mediciones, tolerancias, normas aplicables…" rows={3} />
           </Field>
           <Field label="Conclusiones" required>
             <Textarea value={inv.conclusions} onChange={(e) => set("conclusions", e.target.value)} placeholder="Conclusiones del análisis…" rows={2} />
