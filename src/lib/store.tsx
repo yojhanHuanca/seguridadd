@@ -197,6 +197,7 @@ interface ActionPlanInput {
   planDate?: string;
   scheduledDate?: string;
   annexes?: string;
+  secondResponsible?: string;
 }
 
 interface ExtensionInput {
@@ -544,6 +545,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               planDate: plan.planDate,
               scheduledDate: plan.scheduledDate,
               annexes: plan.annexes,
+              secondResponsible: plan.secondResponsible,
             },
           },
           {
@@ -551,7 +553,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             actor: SAFETY_USER.name,
             actorRole: "seguridad",
             title: `Plan de Acción enviado a ${head} · ${AREA_LABELS[plan.sentToArea]}`,
-            detail: `Correo enviado a ${head.toLowerCase().replace(" ", ".")}@metrolinea1.pe con el resumen del plan. ${plan.items.length} actividades. Pendiente de aprobación por SO.`,
+            detail: `Correo enviado a ${head?.toLowerCase().replace(" ", ".") || "jefe.del.area"}@metrolinea1.pe con el resumen del plan. ${plan.items.length} actividades. Pendiente de aprobación por SO.`,
           }
         )
       );
