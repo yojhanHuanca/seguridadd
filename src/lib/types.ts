@@ -17,6 +17,17 @@ export type EventType =
 
 export type Priority = "critica" | "alta" | "media" | "baja";
 
+export const SLA_DAYS: Record<Priority, number> = {
+  critica: 3,
+  alta: 7,
+  media: 14,
+  baja: 21,
+};
+
+export function slaDaysFor(priority: Priority): number {
+  return SLA_DAYS[priority];
+}
+
 export type Area =
   | "mantenimiento"
   | "subestaciones"

@@ -27,6 +27,7 @@ import {
   type TimelineEvent,
   type User,
   type UserRole,
+  slaDaysFor,
 } from "./types";
 import { SEED_CASES, SEED_NOTIFICATIONS } from "./seed";
 import { SEED_USERS, SEED_SYNC_LOGS, NEW_USERS_FROM_EXCEL } from "./seedUsers";
@@ -319,7 +320,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSeq(nextSeq);
       const id = caseCodeFromSeq(nextSeq);
       const sla = new Date();
-      sla.setDate(sla.getDate() + (input.priority === "critica" ? 3 : input.priority === "alta" ? 7 : input.priority === "media" ? 14 : 21));
+      sla.setDate(sla.getDate() + slaDaysFor(input.priority));
       const newCase: CaseFile = {
         id,
         type: input.type,

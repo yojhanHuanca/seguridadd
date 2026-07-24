@@ -75,6 +75,7 @@ export function DecisionCenter() {
   const totalPendientes = counts.aprobaciones + counts.planes + counts.prorrogas + counts.criticos + counts.reaperturas + counts.alertas;
 
   const indicators = [
+    { id: "all" as const, label: "Todo", count: totalPendientes, color: "#14814a", bg: "bg-brand-50", text: "text-brand-800", icon: Inbox },
     { id: "criticos" as const, label: "Casos críticos", count: counts.criticos, color: "#d23a2c", bg: "bg-critical-soft", text: "text-critical-ink", icon: AlertOctagon },
     { id: "planes" as const, label: "Planes pendientes", count: counts.planes, color: "#d99520", bg: "bg-warning-soft", text: "text-warning-ink", icon: ClipboardList },
     { id: "prorrogas" as const, label: "Prórrogas", count: counts.prorrogas, color: "#d99520", bg: "bg-warning-soft", text: "text-warning-ink", icon: Timer },
@@ -97,7 +98,7 @@ export function DecisionCenter() {
       </div>
 
       {/* Panel resumen con indicadores */}
-      <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {indicators.map((ind) => (
           <button
             key={ind.id}
@@ -105,6 +106,7 @@ export function DecisionCenter() {
             className={cn(
               "rounded-xl border p-4 text-left transition-all hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-0.5",
               section === ind.id ? "border-2 ring-2 ring-offset-2 ring-offset-white" : "border-line bg-white",
+              section === ind.id && ind.id === "all" && "ring-brand/20 border-brand/30",
               section === ind.id && ind.id === "criticos" && "ring-critical/20 border-critical/30",
               section === ind.id && (ind.id === "planes" || ind.id === "prorrogas") && "ring-warning/20 border-warning/30",
               section === ind.id && ind.id === "aprobaciones" && "ring-info/20 border-info/30",
@@ -123,26 +125,6 @@ export function DecisionCenter() {
             </div>
             <p className="text-[12px] font-semibold text-ink leading-tight">{ind.label}</p>
             {ind.count === 0 && <p className="text-[10.5px] text-ink-faint mt-0.5">Sin pendientes</p>}
-          </button>
-        ))}
-      </div>
-
-      {/* Filtros */}
-      <div className="mt-5 flex items-center gap-1 p-1 rounded-lg bg-white border border-line w-fit overflow-x-auto scrollbar-none">
-        {[
-          { id: "all" as const, label: "Todo", count: totalPendientes },
-          { id: "criticos" as const, label: "Críticos", count: counts.criticos },
-          { id: "aprobaciones" as const, label: "Aprobaciones", count: counts.aprobaciones },
-          { id: "planes" as const, label: "Planes", count: counts.planes },
-          { id: "prorrogas" as const, label: "Prórrogas", count: counts.prorrogas },
-          { id: "reaperturas" as const, label: "Reaperturas", count: counts.reaperturas },
-          { id: "alertas" as const, label: "Alertas", count: counts.alertas },
-        ].map((t) => (
-          <button key={t.id} onClick={() => setSection(t.id)}
-            className={cn("h-8 px-3 rounded-md text-[12px] font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap",
-              section === t.id ? "bg-brand-700 text-white" : "text-ink-soft hover:bg-surface")}>
-            {t.label}
-            {t.count > 0 && <span className={cn("text-[10px] tabular-nums px-1 rounded-full", section === t.id ? "bg-white/20" : "bg-surface-2 text-ink-quiet")}>{t.count}</span>}
           </button>
         ))}
       </div>

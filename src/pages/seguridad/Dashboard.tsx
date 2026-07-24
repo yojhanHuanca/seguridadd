@@ -11,7 +11,6 @@ import {
   ArrowUpRight,
   Activity,
   TrendingUp,
-  MapPin,
   Train,
   Siren,
   ChevronRight,
@@ -27,6 +26,7 @@ import { Card, CardHeader } from "@/design-system/primitives/Card";
 import { Button } from "@/design-system/primitives/Button";
 import { Pill, PriorityPill, StagePill } from "@/design-system/primitives/Pill";
 import { Progress } from "@/design-system/primitives/Progress";
+import { IncidentMap } from "@/pages/seguridad/IncidentMap";
 import {
   CHART_COLORS,
   DonutChart,
@@ -37,7 +37,6 @@ import {
 import {
   AREA_LABELS,
   EVENT_LABELS,
-  STATIONS,
   STAGE_STATUS,
   type Stage,
 } from "@/lib/types";
@@ -237,7 +236,12 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Decision center + station map */}
+      {/* Incident Map — full width monitoring center */}
+      <div className="mt-5">
+        <IncidentMap />
+      </div>
+
+      {/* Decision center + by station */}
       <div className="mt-5 grid lg:grid-cols-3 gap-5">
         <Card className="lg:col-span-2" padded={false}>
           <div className="p-5 pb-3">
@@ -296,21 +300,6 @@ export function Dashboard() {
           </div>
         </Card>
 
-        <Card padded={false} className="overflow-hidden">
-          <div className="p-5 pb-3">
-            <CardHeader
-              icon={<MapPin className="h-4.5 w-4.5" />}
-              title="Mapa de incidencias"
-              subtitle="Estaciones con casos activos"
-              className="mb-3"
-            />
-          </div>
-          <StationMap cases={cases} />
-        </Card>
-      </div>
-
-      {/* By station + recent activity */}
-      <div className="mt-5 grid lg:grid-cols-3 gap-5">
         <Card>
           <CardHeader
             icon={<Train className="h-4.5 w-4.5" />}
@@ -319,45 +308,46 @@ export function Dashboard() {
           />
           <HBarsChart data={byStation} height={210} />
         </Card>
-
-        <Card className="lg:col-span-2" padded={false}>
-          <div className="p-5 pb-3">
-            <CardHeader
-              icon={<Activity className="h-4.5 w-4.5" />}
-              title="Actividad reciente"
-              subtitle="Últimos eventos registrados en el sistema"
-              className="mb-3"
-              action={<Pill tone="neutral">Tiempo real</Pill>}
-            />
-          </div>
-          <div className="divide-y divide-line-soft max-h-[280px] overflow-y-auto">
-            {recent.map((t) => (
-              <div key={t.id} className="flex items-start gap-3 p-4">
-                <div
-                  className={cn(
-                    "h-8 w-8 rounded-lg grid place-items-center shrink-0 text-[12px] font-semibold",
-                    t.actorRole === "seguridad" ? "bg-brand-100 text-brand-800" : "bg-surface-2 text-ink-soft"
-                  )}
-                >
-                  {t.actor.split(" ").map((p) => p[0]).slice(0, 2).join("")}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12.5px] text-ink">
-                    <span className="font-semibold">{t.actor}</span>{" "}
-                    <span className="text-ink-soft">· {t.title}</span>
-                  </p>
-                  <p className="text-[11.5px] text-ink-quiet mt-0.5">
-                    <Link to={`/seguridad/casos/${t.caseId}`} className="font-mono text-brand-700 hover:underline">{t.caseId}</Link>
-                    {" · "}
-                    {relativeTime(t.at)}
-                  </p>
-                </div>
-                <PriorityPill priority={t.priority} />
-              </div>
-            ))}
-          </div>
-        </Card>
       </div>
+
+      {/* Recent activity — full width */}
+      <Card className="mt-5" padded={false}>
+        <div className="p-5 pb-3">
+          <CardHeader
+            icon={<Activity className="h-4.5 w-4.5" />}
+            title="Actividad reciente"
+            subtitle="Últimos eventos registrados en el sistema"
+            className="mb-3"
+            action={<Pill tone="neutral">Tiempo real</Pill>}
+          />
+        </div>
+        <div className="divide-y divide-line-soft max-h-[280px] overflow-y-auto">
+          {recent.map((t) => (
+            <div key={t.id} className="flex items-start gap-3 p-4">
+              <div
+                className={cn(
+                  "h-8 w-8 rounded-lg grid place-items-center shrink-0 text-[12px] font-semibold",
+                  t.actorRole === "seguridad" ? "bg-brand-100 text-brand-800" : "bg-surface-2 text-ink-soft"
+                )}
+              >
+                {t.actor.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12.5px] text-ink">
+                  <span className="font-semibold">{t.actor}</span>{" "}
+                  <span className="text-ink-soft">· {t.title}</span>
+                </p>
+                <p className="text-[11.5px] text-ink-quiet mt-0.5">
+                  <Link to={`/seguridad/casos/${t.caseId}`} className="font-mono text-brand-700 hover:underline">{t.caseId}</Link>
+                  {" · "}
+                  {relativeTime(t.at)}
+                </p>
+              </div>
+              <PriorityPill priority={t.priority} />
+            </div>
+          ))}
+        </div>
+      </Card>
     </SegShell>
   );
 }
@@ -463,96 +453,6 @@ function ResponsiveSpark({ data, color }: { data: number[]; color: string }) {
       <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <polygon points={`0,30 ${points} 100,30`} fill={`url(#${gid})`} />
     </svg>
-  );
-}
-
-function StationMap({ cases }: { cases: { station: string; stage: Stage; priority: string }[] }) {
-  const counts = useMemo(() => {
-    const map = new Map<string, number>();
-    cases.forEach((c) => {
-      if (STAGE_STATUS[c.stage] === "abierto") map.set(c.station, (map.get(c.station) ?? 0) + 1);
-    });
-    return map;
-  }, [cases]);
-
-  // Position stations along a stylized line
-  const stationList = STATIONS;
-  const width = 360;
-  const height = 240;
-
-  return (
-    <div className="px-5 pb-5">
-      <div className="relative rounded-xl bg-surface border border-line p-4 overflow-hidden">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" aria-hidden>
-          <defs>
-            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#14814a" />
-              <stop offset="100%" stopColor="#38a860" />
-            </linearGradient>
-          </defs>
-          {/* Curved transit line */}
-          <path
-            d={`M 20 ${height - 40} Q ${width / 2} 20 ${width - 20} ${height - 40}`}
-            stroke="url(#lineGrad)"
-            strokeWidth="3"
-            fill="none"
-            strokeLinecap="round"
-          />
-          <path
-            d={`M 20 ${height - 40} Q ${width / 2} 20 ${width - 20} ${height - 40}`}
-            stroke="#14814a"
-            strokeWidth="1"
-            strokeDasharray="4 4"
-            fill="none"
-            opacity="0.4"
-            className="track-dash"
-          />
-          {stationList.map((s, i) => {
-            const t = i / (stationList.length - 1);
-            // Quadratic bezier point
-            const x = (1 - t) * (1 - t) * 20 + 2 * (1 - t) * t * (width / 2) + t * t * (width - 20);
-            const y = (1 - t) * (1 - t) * (height - 40) + 2 * (1 - t) * t * 20 + t * t * (height - 40);
-            const count = counts.get(s) ?? 0;
-            const hasIncident = count > 0;
-            return (
-              <g key={s}>
-                {hasIncident && (
-                  <circle cx={x} cy={y} r={11} fill="#d23a2c" opacity="0.15">
-                    <animate attributeName="r" values="9;13;9" dur="2s" repeatCount="indefinite" />
-                  </circle>
-                )}
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={hasIncident ? 6 : 4}
-                  fill={hasIncident ? "#d23a2c" : "#fff"}
-                  stroke={hasIncident ? "#d23a2c" : "#14814a"}
-                  strokeWidth="2"
-                />
-                {count > 0 && (
-                  <text x={x} y={y - 12} textAnchor="middle" fontSize="10" fontWeight="700" fill="#7a1c12">
-                    {count}
-                  </text>
-                )}
-                {i % 2 === 0 && (
-                  <text x={x} y={y + 18} textAnchor="middle" fontSize="8.5" fill="#767f79">
-                    {s.length > 12 ? s.slice(0, 11) + "…" : s}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-        <div className="mt-3 flex items-center gap-3 text-[11px] text-ink-quiet">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-critical" /> Incidencias activas
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-white border-2 border-brand-600" /> Estación operativa
-          </span>
-        </div>
-      </div>
-    </div>
   );
 }
 
