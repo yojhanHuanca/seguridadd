@@ -241,12 +241,12 @@ export function Sidebar() {
 
       <div className="p-3 border-t border-line-soft">
         <div className="rounded-xl bg-surface p-3 flex items-center gap-3">
-          <span className="h-9 w-9 rounded-full bg-brand-700 text-white grid place-items-center text-[12px] font-semibold shrink-0">
-            MF
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] font-semibold text-ink truncate">Marcela Falcón</p>
-            <p className="text-[11px] text-ink-quiet truncate">Seguridad Operativa</p>
+            <span className="h-9 w-9 rounded-full bg-brand-700 text-white grid place-items-center text-[12px] font-semibold shrink-0">
+              AR
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12.5px] font-semibold text-ink truncate">Antonio Rebaza Lizaraso</p>
+              <p className="text-[11px] text-ink-quiet truncate">Seguridad Operativa</p>
           </div>
         </div>
       </div>

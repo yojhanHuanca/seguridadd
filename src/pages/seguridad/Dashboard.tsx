@@ -34,6 +34,7 @@ import {
   GaugeChart,
   HBarsChart,
   TrendAreaChart,
+  TrendBarChart,
 } from "@/design-system/charts/Charts";
 import {
   AREA_LABELS,
@@ -90,14 +91,19 @@ export function Dashboard() {
   }, [cases]);
 
   const trend = useMemo(() => {
-    const days = 14;
+    const months = 12;
     const out: { label: string; value: number }[] = [];
-    for (let i = days - 1; i >= 0; i--) {
+    const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    for (let i = months - 1; i >= 0; i--) {
       const d = new Date();
-      d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      const count = cases.filter((c) => c.createdAt.slice(0, 10) === key).length;
-      out.push({ label: formatDateShort(d), value: count + (i % 3 === 0 ? 1 : 0) });
+      d.setMonth(d.getMonth() - i);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const count = cases.filter((c) => {
+        const caseDate = new Date(c.createdAt);
+        return caseDate.getFullYear() === year && caseDate.getMonth() === month;
+      }).length;
+      out.push({ label: `${monthNames[month]} ${year.toString().slice(2)}`, value: count });
     }
     return out;
   }, [cases]);
@@ -126,6 +132,9 @@ export function Dashboard() {
     const map = new Map<string, number>();
     // Inicializar con las 26 estaciones reales
     STATIONS.forEach((s) => map.set(s, 0));
+    // Agregar talleres (no gestionan casos, pero se muestran)
+    map.set("Taller Villa El Salvador", 0);
+    map.set("Taller Bayóvar", 0);
     // Contar casos reales por estación
     cases.forEach((c) => {
       if (map.has(c.station)) {
@@ -133,9 +142,19 @@ export function Dashboard() {
       }
     });
     return Array.from(map.entries())
-      .map(([name, value]) => ({ name, value, color: value > 2 ? CHART_COLORS.critical : value > 0 ? CHART_COLORS.warning : CHART_COLORS.brandLight }))
+      .map(([name, value]) => ({ 
+        name, 
+        value, 
+        color: name.includes("Taller") 
+          ? CHART_COLORS.brand 
+          : value > 2 
+            ? CHART_COLORS.critical 
+            : value > 0 
+              ? CHART_COLORS.warning 
+              : CHART_COLORS.brandLight 
+      }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
+      .slice(0, 12);
   }, [cases]);
 
   const recent = useMemo(() => {
@@ -168,15 +187,6 @@ export function Dashboard() {
           delta="+2 hoy"
           deltaTone="info"
           spark={[2, 3, 2, 4, 3, 5, 4, stats.pendientes]}
-        />
-        <KpiCard
-          icon={<AlertOctagon className="h-5 w-5" />}
-          label="Críticos"
-          value={stats.critical}
-          delta="Requieren atención"
-          deltaTone="critical"
-          tone="critical"
-          spark={[1, 0, 1, 2, 1, stats.critical]}
         />
         <KpiCard
           icon={<CalendarClock className="h-5 w-5" />}
@@ -220,11 +230,11 @@ export function Dashboard() {
         <Card className="lg:col-span-2">
           <CardHeader
             icon={<TrendingUp className="h-4.5 w-4.5" />}
-            title="Tendencia de casos · últimos 14 días"
-            subtitle="Ingresos de nuevos reportes a la plataforma"
-            action={<Pill tone="brand" dot>+18% vs. semana previa</Pill>}
+            title="Tendencia de casos · últimos 12 meses"
+            subtitle="Casos reportados por mes"
+            action={<Pill tone="brand" dot>Último año</Pill>}
           />
-          <TrendAreaChart data={trend} height={240} />
+          <TrendBarChart data={trend} height={240} />
         </Card>
         <Card>
           <CardHeader
@@ -250,33 +260,17 @@ export function Dashboard() {
         <IncidentMap />
       </div>
 
-      {/* Casos por estación — data real de las 26 estaciones */}
-      <div className="mt-5 grid lg:grid-cols-2 gap-5">
+{/* Casos por estación — data real de las 26 estaciones */}
+      <div className="mt-5">
         <Card>
           <CardHeader
             icon={<Train className="h-4.5 w-4.5" />}
             title="Casos por estación"
-            subtitle="Top 10 estaciones con mayor actividad · Línea 1"
+            subtitle="Top 12 ubicaciones con mayor actividad · Línea 1 (incluye talleres)"
           />
           <HBarsChart data={byStation} height={300} />
         </Card>
 
-        {/* Resumen de estaciones sin incidencias */}
-        <Card>
-          <CardHeader
-            icon={<MapPin className="h-4.5 w-4.5" />}
-            title="Estaciones sin incidencias"
-            subtitle="Estaciones operativas sin casos registrados"
-          />
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            {STATIONS.filter((s) => !cases.some((c) => c.station === s)).map((s) => (
-              <div key={s} className="flex items-center gap-2 rounded-lg border border-line-soft px-3 py-2">
-                <span className="h-2 w-2 rounded-full bg-brand-500" />
-                <span className="text-[12px] text-ink-soft truncate">{s}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
       </div>
 
       {/* Recent activity — full width */}
@@ -424,4 +418,8 @@ function ResponsiveSpark({ data, color }: { data: number[]; color: string }) {
     </svg>
   );
 }
+
+
+
+
 

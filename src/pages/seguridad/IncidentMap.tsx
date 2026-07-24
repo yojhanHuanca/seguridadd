@@ -66,6 +66,15 @@ interface StationData {
   ultimoSOP?: CaseFile["sop"];
 }
 
+interface TallerData {
+  name: string;
+  x: number;
+  y: number;
+  km: number;
+  tipo: string;
+  capacidad: string;
+}
+
 const RISK_CONFIG: Record<VisualRisk, { color: string; label: string; bg: string; text: string; ring: string }> = {
   bajo: { color: "#22c55e", label: "Bajo", bg: "bg-green-50", text: "text-green-700", ring: "ring-green-200" },
   medio: { color: "#eab308", label: "Medio", bg: "bg-yellow-50", text: "text-yellow-700", ring: "ring-yellow-200" },
@@ -80,9 +89,9 @@ const VISUAL_RISK_ORDER: Record<VisualRisk, number> = {
   critico: 3,
 };
 
-const TALLERES: { name: string; x: number; y: number; km: number; tipo: string }[] = [
-  { name: "Taller Villa El Salvador", x: 30, y: 460, km: 0, tipo: "Mantenimiento pesado" },
-  { name: "Taller Bayóvar", x: 1192, y: 320, km: 34, tipo: "Mantenimiento ligero y garaje" },
+const TALLERES: { name: string; x: number; y: number; km: number; tipo: string; capacidad: string }[] = [
+  { name: "Taller Villa El Salvador", x: 30, y: 460, km: 0, tipo: "Mantenimiento pesado", capacidad: "8 unidades" },
+  { name: "Taller Bayóvar", x: 1192, y: 320, km: 34, tipo: "Mantenimiento ligero y garaje", capacidad: "12 unidades" },
 ];
 
 const STATION_COORDS: { name: string; x: number; y: number; km: number }[] = [
@@ -119,8 +128,11 @@ const MAP_H = 510;
 
 export function IncidentMap() {
   const { cases } = useStore();
-  const [selected, setSelected] = useState<StationData | null>(null);
+  const [selectedStation, setSelectedStation] = useState<StationData | null>(null);
+  const [selectedTaller, setSelectedTaller] = useState<TallerData | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+
+  const selected = selectedStation || selectedTaller;
 
   const stations = useMemo(() => {
     return STATION_COORDS.map((coord) => buildStationData(coord, cases));
@@ -136,7 +148,7 @@ export function IncidentMap() {
 
   useEffect(() => {
     if (!stations.length) return;
-    setSelected((current) => {
+    setSelectedStation((current) => {
       if (current) {
         const fresh = stations.find((station) => station.name === current.name);
         if (fresh) return fresh;
@@ -228,7 +240,7 @@ export function IncidentMap() {
               <div>
                 <p className="text-[15px] font-bold text-ink tracking-tight">Tablero Operativo por Estación</p>
                 <p className="text-[12px] text-ink-quiet mt-0.5">
-                  Vista consolidada de Línea 1 · 26 estaciones · 34 km
+                  Vista consolidada de Línea 1 · 26 estaciones · 34 km · 2 talleres
                 </p>
               </div>
             </div>
@@ -242,7 +254,7 @@ export function IncidentMap() {
             </div>
 
           {/* Contenedor relativo solo al SVG+popup */}
-          <div className="relative bg-[#eef4f1]">
+          <div className="relative bg-gradient-to-br from-[#e8f0eb] via-[#e4ece7] to-[#dbe8e0]">
             <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="w-full h-auto block" style={{ minHeight: 460 }}>
               <defs>
                 <linearGradient id="lineGradL1" x1="0" y1="1" x2="1" y2="0">
@@ -250,24 +262,60 @@ export function IncidentMap() {
                   <stop offset="50%" stopColor="#1f9d52" />
                   <stop offset="100%" stopColor="#38a860" />
                 </linearGradient>
+                <linearGradient id="riverGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#a8d4e8" />
+                  <stop offset="50%" stopColor="#b8d8ec" />
+                  <stop offset="100%" stopColor="#c8ddf0" />
+                </linearGradient>
+                <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f0f5f2" />
+                  <stop offset="100%" stopColor="#e8f0eb" />
+                </linearGradient>
                 <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#c4d4cc" strokeWidth="0.5" opacity="0.5" />
+                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#c4d4cc" strokeWidth="0.5" opacity="0.4" />
                 </pattern>
                 <filter id="markerShadow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#0c5431" floodOpacity="0.3" />
+                  <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#0c5431" floodOpacity="0.25" />
+                </filter>
+                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                  <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
                 </filter>
               </defs>
 
-              <rect width={MAP_W} height={MAP_H} fill="url(#grid)" />
-              {/* Río Rímac */}
-              <path d="M 0 230 Q 400 260 800 220 T 1220 210" stroke="#b8d4e8" strokeWidth="18" fill="none" opacity="0.3" strokeLinecap="round" />
-              <path d="M 0 230 Q 400 260 800 220 T 1220 210" stroke="#8ab4d8" strokeWidth="1" fill="none" opacity="0.3" strokeDasharray="6 4" />
+              <rect width={MAP_W} height={MAP_H} fill="url(#bgGrad)" />
+              <rect width={MAP_W} height={MAP_H} fill="url(#grid)" opacity="0.6" />
+              
+              {/* Zonas urbanas sutiles */}
+              <ellipse cx="200" cy="350" rx="120" ry="80" fill="#d4e0d8" opacity="0.3" />
+              <ellipse cx="500" cy="150" rx="150" ry="100" fill="#d4e0d8" opacity="0.3" />
+              <ellipse cx="800" cy="200" rx="130" ry="90" fill="#d4e0d8" opacity="0.3" />
+              <ellipse cx="1100" cy="300" rx="100" ry="70" fill="#d4e0d8" opacity="0.3" />
+              
+              {/* Río Rímac más realista */}
+              <path d="M 0 230 Q 400 260 800 220 T 1220 210" stroke="url(#riverGrad)" strokeWidth="20" fill="none" opacity="0.5" strokeLinecap="round" />
+              <path d="M 0 230 Q 400 260 800 220 T 1220 210" stroke="#8ab4d8" strokeWidth="1" fill="none" opacity="0.4" strokeDasharray="8 6" />
 
-              {/* Etiquetas de distritos */}
-              <text x="60" y="478" fontSize="10" fill="#5a7a6a" fontWeight="700" letterSpacing="1">VILLA EL SALVADOR</text>
-              <text x="340" y="320" fontSize="10" fill="#5a7a6a" fontWeight="700" letterSpacing="1">SURCO · SAN BORJA</text>
-              <text x="750" y="85" fontSize="10" fill="#5a7a6a" fontWeight="700" letterSpacing="1">S.J. DE LURIGANCHO</text>
-              <text x="1080" y="380" fontSize="10" fill="#5a7a6a" fontWeight="700" letterSpacing="1">BAYÓVAR</text>
+              {/* Etiquetas de distritos con fondo sutil */}
+              <g opacity="0.7">
+                <rect x="20" y="462" width="130" height="18" rx="4" fill="#ffffff" opacity="0.85" />
+                <text x="35" y="475" fontSize="9" fill="#4a6a5a" fontWeight="700" letterSpacing="0.5">VILLA EL SALVADOR</text>
+              </g>
+              <g opacity="0.7">
+                <rect x="290" y="305" width="120" height="18" rx="4" fill="#ffffff" opacity="0.85" />
+                <text x="300" y="318" fontSize="9" fill="#4a6a5a" fontWeight="700" letterSpacing="0.5">SURCO · SAN BORJA</text>
+              </g>
+              <g opacity="0.7">
+                <rect x="680" y="70" width="140" height="18" rx="4" fill="#ffffff" opacity="0.85" />
+                <text x="695" y="83" fontSize="9" fill="#4a6a5a" fontWeight="700" letterSpacing="0.5">S.J. DE LURIGANCHO</text>
+              </g>
+              <g opacity="0.7">
+                <rect x="1030" y="365" width="100" height="18" rx="4" fill="#ffffff" opacity="0.85" />
+                <text x="1040" y="378" fontSize="9" fill="#4a6a5a" fontWeight="700" letterSpacing="0.5">BAYÓVAR</text>
+              </g>
 
               {/* Línea 1 —轨迹 con gradiente */}
               <path d={linePath} stroke="#14814a" strokeWidth="9" fill="none" strokeLinecap="round" opacity="0.12" />
@@ -288,7 +336,10 @@ export function IncidentMap() {
                 return (
                   <g
                     key={station.name}
-                    onClick={() => setSelected(station)}
+                    onClick={() => {
+                      setSelectedStation(station);
+                      setSelectedTaller(null);
+                    }}
                     onMouseEnter={() => setHovered(station.name)}
                     onMouseLeave={() => setHovered(null)}
                     className="cursor-pointer"
@@ -360,54 +411,58 @@ export function IncidentMap() {
                 return (
                   <g
                     key={taller.name}
+                    onClick={() => {
+                      setSelectedTaller(taller);
+                      setSelectedStation(null);
+                    }}
                     onMouseEnter={() => setHovered(taller.name)}
                     onMouseLeave={() => setHovered(null)}
                     className="cursor-pointer"
                   >
-                    {/* Glow */}
-                    <circle cx={taller.x} cy={taller.y} r={16} fill="#14814a" opacity="0.1" />
-                    {/* Cuerpo del taller — rectángulo redondeado */}
-                    <rect
-                      x={taller.x - 13}
-                      y={taller.y - 11}
-                      width={26}
-                      height={22}
-                      rx={5}
+                    {/* Glow sutil */}
+                    <circle cx={taller.x} cy={taller.y} r={14} fill="#14814a" opacity="0.06" />
+                    {/* Marcador circular similar a estaciones pero con borde doble */}
+                    <circle cx={taller.x} cy={taller.y} r={10} fill="#14814a" opacity={isHovered ? 0.2 : 0.1} />
+                    <circle
+                      cx={taller.x}
+                      cy={taller.y}
+                      r={7}
                       fill="#0c5431"
                       stroke="#14814a"
                       strokeWidth={isHovered ? 3 : 2}
                       filter="url(#markerShadow)"
                       style={{
-                        transform: isHovered ? "scale(1.12)" : undefined,
+                        transform: isHovered ? "scale(1.15)" : undefined,
                         transformOrigin: `${taller.x}px ${taller.y}px`,
                       }}
                     />
-                    {/* Icono de warehouse (texto W) */}
-                    <text x={taller.x} y={taller.y + 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#ffffff">
-                      W
+                    {/* Icono de engranaje */}
+                    <text x={taller.x} y={taller.y + 2.5} textAnchor="middle" fontSize="8" fontWeight="700" fill="#ffffff">
+                      ⚙
                     </text>
-                    {/* Etiqueta */}
+                    {/* Etiqueta principal (compacta) */}
                     <text
                       x={taller.x}
-                      y={taller.y - 18}
+                      y={taller.y - 14}
                       textAnchor="middle"
-                      fontSize="9"
+                      fontSize="8.5"
                       fontWeight="700"
                       fill="#0c5431"
                       style={{ pointerEvents: "none" }}
                     >
-                      {taller.name}
+                      {taller.name.replace("Taller ", "T. ")}
                     </text>
+                    {/* Tipo y capacidad en una línea */}
                     <text
                       x={taller.x}
-                      y={taller.y + 22}
+                      y={taller.y + 20}
                       textAnchor="middle"
-                      fontSize="7.5"
+                      fontSize="7"
+                      fontWeight="600"
                       fill="#5a7a6a"
-                      opacity="0.7"
                       style={{ pointerEvents: "none" }}
                     >
-                      {taller.tipo}
+                      {taller.tipo} · {taller.capacidad}
                     </text>
                   </g>
                 );
@@ -421,9 +476,16 @@ export function IncidentMap() {
                 y={selected.y}
                 mapW={MAP_W}
                 mapH={MAP_H}
-                onClose={() => setSelected(null)}
+                onClose={() => {
+                  setSelectedStation(null);
+                  setSelectedTaller(null);
+                }}
               >
-                <StationPanel station={selected} onClose={() => setSelected(null)} />
+                {selectedStation ? (
+                  <StationPanel station={selectedStation} onClose={() => setSelectedStation(null)} />
+                ) : selectedTaller ? (
+                  <TallerPanel taller={selectedTaller} onClose={() => setSelectedTaller(null)} />
+                ) : null}
               </MapPopup>
             )}
 
@@ -435,6 +497,13 @@ export function IncidentMap() {
                   <span className="text-[11px] text-ink-soft">{RISK_CONFIG[riskKey].label}</span>
                 </div>
               ))}
+              <div className="h-4 w-px bg-line mx-2" />
+              <div className="flex items-center gap-1.5">
+                <div className="h-4 w-4 rounded bg-brand-700 flex items-center justify-center">
+                  <span className="text-[8px] text-white font-bold">⚙</span>
+                </div>
+                <span className="text-[11px] text-ink-soft">Talleres</span>
+              </div>
               <div className="ml-auto flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-brand-700" />
                 <span className="text-[11px] text-ink-quiet">Seleccione una estación para revisar su detalle</span>
@@ -514,6 +583,59 @@ function MapPopup({
         {children}
       </div>
     </div>
+  );
+}
+
+function TallerPanel({ taller, onClose }: { taller: TallerData; onClose: () => void }) {
+  return (
+    <Card padded={false} className="overflow-hidden border-line-strong shadow-[0_8px_30px_rgba(12,84,49,0.18)]">
+      <div className="px-5 py-4 border-b border-line-soft relative bg-brand-50">
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 h-7 w-7 rounded-lg grid place-items-center text-ink-quiet hover:bg-white/70 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <div className="flex items-start gap-3">
+          <div className="h-12 w-12 rounded-xl bg-brand-100 border border-brand-200 grid place-items-center shrink-0 ring-2 ring-brand-200">
+            <span className="text-2xl">⚙</span>
+          </div>
+          <div className="min-w-0 pr-8">
+            <p className="text-[17px] font-bold text-ink tracking-tight">{taller.name}</p>
+            <p className="text-[12px] text-ink-quiet mt-0.5">Taller de mantenimiento · Línea 1</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Pill tone="brand">Taller operativo</Pill>
+              <Pill tone="neutral">km {taller.km}</Pill>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-5 space-y-5">
+        <div className="grid grid-cols-2 gap-2.5">
+          <StatBox label="Tipo" value={taller.tipo} icon={<Building2 className="h-3.5 w-3.5" />} tone="neutral" isText />
+          <StatBox label="Capacidad" value={taller.capacidad} icon={<Shield className="h-3.5 w-3.5" />} tone="brand" isText />
+        </div>
+
+        <div className="rounded-2xl border border-line-soft p-4">
+          <p className="text-[11px] font-semibold text-ink-faint uppercase tracking-wider mb-3">Información del taller</p>
+          <div className="space-y-2.5">
+            <InfoRow icon={<MapPin className="h-3.5 w-3.5" />} label="Ubicación" value={`km ${taller.km} de la línea`} />
+            <InfoRow icon={<Building2 className="h-3.5 w-3.5" />} label="Tipo de mantenimiento" value={taller.tipo} />
+            <InfoRow icon={<Shield className="h-3.5 w-3.5" />} label="Capacidad" value={taller.capacidad} />
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-surface border border-line p-4 text-center">
+          <p className="text-[12.5px] font-medium text-ink">Taller de mantenimiento</p>
+          <p className="text-[11.5px] text-ink-quiet mt-1">Este taller no gestiona expedientes de seguridad operativa.</p>
+        </div>
+
+        <div className="h-10 rounded-xl border border-line bg-surface text-[12px] text-ink-faint inline-flex items-center justify-center w-full">
+          Sin expedientes asociados
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -767,12 +889,14 @@ function StatBox({
   icon,
   tone = "neutral",
   suffix = "",
+  isText = false,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   icon: React.ReactNode;
   tone?: "critical" | "brand" | "neutral";
   suffix?: string;
+  isText?: boolean;
 }) {
   const tones = {
     critical: "text-critical",
@@ -783,7 +907,7 @@ function StatBox({
   return (
     <div className="rounded-xl border border-line-soft p-3 text-center bg-white">
       <div className={cn("flex items-center justify-center gap-1 text-ink-faint mb-1", tones[tone])}>{icon}</div>
-      <p className={cn("text-[20px] font-bold tabular-nums leading-none", tones[tone])}>
+      <p className={cn(isText ? "text-[13px] font-semibold" : "text-[20px] font-bold tabular-nums", "leading-none", tones[tone])}>
         {value}
         {suffix}
       </p>

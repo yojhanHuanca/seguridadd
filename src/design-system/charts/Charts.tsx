@@ -93,6 +93,43 @@ export function TrendAreaChart({
   );
 }
 
+export function TrendBarChart({
+  data,
+  dataKey = "value",
+  xKey = "label",
+  color = CHART_COLORS.brand,
+  height = 220,
+}: {
+  data: { label: string; value: number }[];
+  dataKey?: string;
+  xKey?: string;
+  color?: string;
+  height?: number;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }} barCategoryGap={18}>
+        <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.surface} vertical={false} />
+        <XAxis
+          dataKey={xKey}
+          tick={{ fill: CHART_COLORS.inkFaint, fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          dy={6}
+        />
+        <YAxis
+          tick={{ fill: CHART_COLORS.inkFaint, fontSize: 11 }}
+          tickLine={false}
+          axisLine={false}
+          width={32}
+        />
+        <Tooltip contentStyle={tooltipStyle} labelStyle={labelStyle} itemStyle={itemStyle} cursor={{ fill: CHART_COLORS.surface, fillOpacity: 0.4 }} />
+        <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} barSize={24} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function MiniLineChart({
   data,
   dataKey = "value",

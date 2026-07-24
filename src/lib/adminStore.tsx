@@ -216,9 +216,9 @@ const SEED_ROLES: AdminRole[] = [
 ];
 
 const SEED_AUDIT: AuditEntry[] = [
-  { id: "aud_01", action: "login", actor: "Marcela Falcón", actorRole: "Seguridad Operativa", target: "Sistema", at: new Date(Date.now() - 3600000).toISOString() },
-  { id: "aud_02", action: "case_approved", actor: "Marcela Falcón", actorRole: "Seguridad Operativa", target: "EXP-2026-00008", detail: "Caso aprobado para investigación", at: new Date(Date.now() - 7200000).toISOString() },
-  { id: "aud_03", action: "plan_approved", actor: "Marcela Falcón", actorRole: "Seguridad Operativa", target: "EXP-2026-00009", detail: "Plan de acción aprobado", at: new Date(Date.now() - 10800000).toISOString() },
+  { id: "aud_01", action: "login", actor: "Antonio Rebaza Lizaraso", actorRole: "Seguridad Operativa", target: "Sistema", at: new Date(Date.now() - 3600000).toISOString() },
+  { id: "aud_02", action: "case_approved", actor: "Antonio Rebaza Lizaraso", actorRole: "Seguridad Operativa", target: "EXP-2026-00008", detail: "Caso aprobado para investigación", at: new Date(Date.now() - 7200000).toISOString() },
+  { id: "aud_03", action: "plan_approved", actor: "Antonio Rebaza Lizaraso", actorRole: "Seguridad Operativa", target: "EXP-2026-00009", detail: "Plan de acción aprobado", at: new Date(Date.now() - 10800000).toISOString() },
   { id: "aud_04", action: "user_created", actor: "Administrador", actorRole: "Administrador", target: "EMP-0034", detail: "Nuevo usuario sincronizado desde Excel", at: new Date(Date.now() - 86400000).toISOString() },
   { id: "aud_05", action: "config_updated", actor: "Administrador", actorRole: "Administrador", target: "Configuración General", detail: "Días máximos de investigación: 14", at: new Date(Date.now() - 172800000).toISOString() },
 ];

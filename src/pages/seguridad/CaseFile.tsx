@@ -669,7 +669,7 @@ function InvestigationStage({ c, store }: { c: Store["cases"][number]; store: St
 
 /* ─── Tarjetas: Investigador + Jefe Responsable + Trabajadores Involucrados ─── */
 function ResponsiblesAndWorkers({ c, store, readOnly }: { c: Store["cases"][number]; store: Store; readOnly?: boolean }) {
-  const investigatorName = c.investigator ?? "Marcela Falcón";
+  const investigatorName = c.investigator ?? "Antonio Rebaza Lizaraso";
   const jefeArea = c.assignee ?? (c.assigneeArea ? AREA_HEADS[c.assigneeArea] : "Por asignar");
   const jefeAreaLabel = c.assigneeArea ? AREA_LABELS[c.assigneeArea] : "—";
   const involved = (c.involvedWorkers ?? []).filter((w) => !w.removedAt);
@@ -1088,7 +1088,7 @@ function PlanStage({ c, store }: { c: Store["cases"][number]; store: Store }) {
 }
 
 function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store: Store; onSubmitted: () => void }) {
-  const [elaboratedBy, setElaboratedBy] = useState("Marcela Falcón");
+  const [elaboratedBy, setElaboratedBy] = useState("Antonio Rebaza Lizaraso");
   const [actionType, setActionType] = useState("Correctiva");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
@@ -1133,16 +1133,7 @@ function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store:
             {RESPONSABLES_INVESTIGACION.map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}
-            <option value="__otro__">Otro (escribir…)</option>
           </Select>
-          {!RESPONSABLES_INVESTIGACION.includes(elaboratedBy) && (
-            <Input
-              className="mt-2"
-              value={elaboratedBy}
-              onChange={(e) => setElaboratedBy(e.target.value)}
-              placeholder="Escriba el nombre del responsable…"
-            />
-          )}
         </Field>
         <Field label="Tipo de acción" required>
           <Select value={actionType} onChange={(e) => setActionType(e.target.value)}>
@@ -1153,11 +1144,6 @@ function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store:
           <Select value={sentToArea} onChange={(e) => setSentToArea(e.target.value as Area)}>
             <option value="">Seleccione un área…</option>
             {(Object.keys(AREA_LABELS) as Area[]).map((a) => <option key={a} value={a}>{AREA_LABELS[a]} · Jefe: {AREA_HEADS[a]}</option>)}
-          </Select>
-        </Field>
-        <Field label="Prioridad del plan" required>
-          <Select value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-            {(["critica", "alta", "media", "baja"] as Priority[]).map((p) => <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>)}
           </Select>
         </Field>
         <Field label="Descripción detallada" required className="sm:col-span-2">
@@ -1789,7 +1775,6 @@ function downloadPlan(c: Store["cases"][number]) {
       <div><b>Elaborado por</b><br/>${escapeHtml(plan.elaboratedBy)}</div>
       <div><b>Fecha de creación</b><br/>${formatDate(plan.submittedAt ?? c.createdAt)}</div>
       <div><b>Tiempo estimado</b><br/>${escapeHtml(plan.estimatedTime)}</div>
-      <div><b>Prioridad del plan</b><br/>${PRIORITY_LABELS[plan.priority]}</div>
     </div>
     ${plan.observations ? `<h2>Observaciones generales</h2><p style="font-size:12.5px">${escapeHtml(plan.observations)}</p>` : ""}
     <h2>Actividades</h2>

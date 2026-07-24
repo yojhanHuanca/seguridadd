@@ -274,7 +274,7 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-const SAFETY_USER = { name: "Marcela Falcón", role: "seguridad" as Role, initials: "MF", email: "m.falcon@metrolinea1.pe" };
+const SAFETY_USER = { name: "Antonio Rebaza Lizaraso", role: "seguridad" as Role, initials: "AR", email: "a.rebaza@metrolinea1.pe" };
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [cases, setCases] = useState<CaseFile[]>(() => loadCases());
