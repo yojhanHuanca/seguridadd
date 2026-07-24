@@ -13,6 +13,9 @@ import {
   CheckCircle2,
   FolderKanban,
   ChevronDown,
+  ClipboardList,
+  Calendar,
+  UserCheck,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { SegShell } from "@/design-system/layout/SegShell";
@@ -59,6 +62,7 @@ export function CaseList() {
   const [query, setQuery] = useState(params.get("q") ?? "");
   const [areaFilter, setAreaFilter] = useState<string>("");
   const [sort, setSort] = useState<"recent" | "priority" | "sla">("recent");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const setFilter = (id: string) => {
     setTab(id);
@@ -193,55 +197,134 @@ export function CaseList() {
               {filtered.map((c) => {
                 const sla = slaState(c.slaDueDate, c.stage);
                 const days = daysUntil(c.slaDueDate);
+                const isExpanded = expandedId === c.id;
+                const hasPlan = c.actionPlan || c.sop?.planCodigo;
                 return (
-                  <tr key={c.id} className="group hover:bg-surface/40 transition-colors">
-                    <td className="px-4 py-3.5">
-                      <span className="font-mono text-[12px] font-semibold text-brand-700">{c.id}</span>
-                      <p className="text-[10.5px] text-ink-faint mt-0.5">{formatDate(c.createdAt)}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className={cn("inline-flex px-2 py-1 rounded-md text-[11px] font-medium", TYPE_TONE[c.type])}>
-                        {EVENT_LABELS[c.type]}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 max-w-[320px]">
-                      <p className="text-[13px] font-semibold text-ink truncate">{c.title}</p>
-                      <p className="text-[11px] text-ink-quiet truncate mt-0.5">{c.location}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="text-[12.5px] text-ink-soft truncate">{c.reporter}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="text-[12.5px] text-ink-soft truncate">{c.station}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span className="text-[12px] text-ink-soft">{AREA_LABELS[c.area]}</span>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <RiskPill risk={c.riskLevel} />
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <StagePill stage={c.stage} />
-                    </td>
-                    <td className="px-4 py-3.5">
-                      {c.stage === "cierre" ? (
-                        <span className="text-[11.5px] text-ink-faint">Cerrado</span>
-                      ) : sla === "overdue" ? (
-                        <Pill tone="critical" dot>Vencido {Math.abs(days)}d</Pill>
-                      ) : sla === "soon" ? (
-                        <Pill tone="warning" dot>{days}d</Pill>
-                      ) : (
-                        <span className="text-[11.5px] tabular-nums text-ink-quiet">{days}d</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Link to={`/seguridad/casos/${c.id}`}>
-                        <Button variant="outline" size="sm" className="opacity-80 group-hover:opacity-100">
-                          Expediente <ArrowRight className="h-3.5 w-3.5" />
-                        </Button>
-                      </Link>
-                    </td>
-                  </tr>
+                  <>
+                    <tr key={c.id} className="group hover:bg-surface/40 transition-colors">
+                      <td className="px-4 py-3.5">
+                        <span className="font-mono text-[12px] font-semibold text-brand-700">{c.id}</span>
+                        <p className="text-[10.5px] text-ink-faint mt-0.5">{formatDate(c.createdAt)}</p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={cn("inline-flex px-2 py-1 rounded-md text-[11px] font-medium", TYPE_TONE[c.type])}>
+                          {EVENT_LABELS[c.type]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 max-w-[320px]">
+                        <p className="text-[13px] font-semibold text-ink truncate">{c.title}</p>
+                        <p className="text-[11px] text-ink-quiet truncate mt-0.5">{c.location}</p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <p className="text-[12.5px] text-ink-soft truncate">{c.reporter}</p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <p className="text-[12.5px] text-ink-soft truncate">{c.station}</p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="text-[12px] text-ink-soft">{AREA_LABELS[c.area]}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <RiskPill risk={c.riskLevel} />
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <StagePill stage={c.stage} />
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {c.stage === "cierre" ? (
+                          <span className="text-[11.5px] text-ink-faint">Cerrado</span>
+                        ) : sla === "overdue" ? (
+                          <Pill tone="critical" dot>Vencido {Math.abs(days)}d</Pill>
+                        ) : sla === "soon" ? (
+                          <Pill tone="warning" dot>{days}d</Pill>
+                        ) : (
+                          <span className="text-[11.5px] tabular-nums text-ink-quiet">{days}d</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {hasPlan && (
+                            <button
+                              onClick={() => setExpandedId(isExpanded ? null : c.id)}
+                              className="h-7 px-2 rounded-md text-[11px] font-medium text-ink-soft border border-line hover:bg-surface transition-colors flex items-center gap-1"
+                            >
+                              {isExpanded ? "Ocultar" : "Planes"}
+                              <ChevronDown className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-180")} />
+                            </button>
+                          )}
+                          <Link to={`/seguridad/casos/${c.id}`}>
+                            <Button variant="outline" size="sm" className="opacity-80 group-hover:opacity-100">
+                              Expediente <ArrowRight className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && hasPlan && (
+                      <tr key={`${c.id}-expanded`} className="bg-surface/60">
+                        <td colSpan={10} className="px-4 py-4">
+                          <div className="rounded-xl border border-line bg-white p-4">
+                            <p className="text-[11px] font-semibold tracking-wide uppercase text-ink-faint mb-3 flex items-center gap-1.5">
+                              <ClipboardList className="h-3.5 w-3.5" /> Planes de Acción asociados
+                            </p>
+                            <div className="space-y-2">
+                              {/* Plan principal del expediente */}
+                              {c.actionPlan && (
+                                <div className="flex items-start gap-3 rounded-lg border border-line-soft p-3 hover:bg-surface/40 transition-colors">
+                                  <div className="h-8 w-8 rounded-lg bg-brand-50 text-brand-700 grid place-items-center shrink-0">
+                                    <ClipboardList className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-mono text-[12px] font-semibold text-brand-700">
+                                        {c.sop?.planCodigo ?? `PLA-${c.id}`}
+                                      </span>
+                                      <Pill tone={c.actionPlan.reviewDecision === "aprobado" ? "brand" : c.actionPlan.reviewDecision === "rechazado" ? "critical" : "warning"} dot>
+                                        {c.actionPlan.reviewDecision === "aprobado" ? "Aprobado" : c.actionPlan.reviewDecision === "rechazado" ? "Rechazado" : "Pendiente"}
+                                      </Pill>
+                                    </div>
+                                    <p className="text-[12.5px] text-ink-soft mt-1 truncate">{c.actionPlan.description || "Sin descripción"}</p>
+                                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-ink-quiet">
+                                      <span className="flex items-center gap-1"><UserCheck className="h-3 w-3" /> {c.actionPlan.elaboratedBy}</span>
+                                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(c.actionPlan.startDate)} → {formatDate(c.actionPlan.dueDate)}</span>
+                                      <span className="flex items-center gap-1"><Activity className="h-3 w-3" /> {c.actionPlan.items.length} actividades</span>
+                                    </div>
+                                  </div>
+                                  <Link to={`/seguridad/casos/${c.id}`}>
+                                    <Button variant="ghost" size="sm">
+                                      Ver <ArrowRight className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </Link>
+                                </div>
+                              )}
+                              {/* Plan desde campo SOP */}
+                              {!c.actionPlan && c.sop?.planCodigo && (
+                                <div className="flex items-start gap-3 rounded-lg border border-line-soft p-3">
+                                  <div className="h-8 w-8 rounded-lg bg-brand-50 text-brand-700 grid place-items-center shrink-0">
+                                    <ClipboardList className="h-4 w-4" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-mono text-[12px] font-semibold text-brand-700">{c.sop.planCodigo}</span>
+                                      <Pill tone={c.sop.planEstado === "cerrado" ? "brand" : "warning"} dot>
+                                        {c.sop.planEstado === "cerrado" ? "Cerrado" : "Pendiente"}
+                                      </Pill>
+                                    </div>
+                                    {c.sop.planDescripcion && <p className="text-[12.5px] text-ink-soft mt-1">{c.sop.planDescripcion}</p>}
+                                    <div className="flex items-center gap-3 mt-1.5 text-[11px] text-ink-quiet">
+                                      {c.sop.planResponsable && <span className="flex items-center gap-1"><UserCheck className="h-3 w-3" /> {c.sop.planResponsable}</span>}
+                                      {c.sop.planFecha && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(c.sop.planFecha)}</span>}
+                                      {c.sop.planFechaProgramada && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Programada: {formatDate(c.sop.planFechaProgramada)}</span>}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 );
               })}
             </tbody>
