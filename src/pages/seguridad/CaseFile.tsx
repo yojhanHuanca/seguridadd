@@ -675,23 +675,34 @@ function ResponsiblesAndWorkers({ c, store, readOnly }: { c: Store["cases"][numb
   const involved = (c.involvedWorkers ?? []).filter((w) => !w.removedAt);
 
   return (
-    <div className="grid lg:grid-cols-3 gap-4">
+    <div className="grid lg:grid-cols-2 gap-4">
       {/* 1. Investigador SO */}
       <Card className="p-5">
-        <div className="flex items-center gap-2.5 mb-3">
-          <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-700 grid place-items-center"><ShieldCheck className="h-4.5 w-4.5" /></div>
-          <div>
+        <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-line-soft">
+          <div className="h-9 w-9 rounded-lg bg-brand-50 text-brand-700 grid place-items-center shrink-0"><ShieldCheck className="h-4.5 w-4.5" /></div>
+          <div className="min-w-0">
             <p className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-ink-faint">Investigador SO</p>
-            <p className="text-[13px] font-bold text-ink leading-tight">Responsable de Hallazgo/Investigación/RSO</p>
+            <p className="text-[13px] font-bold text-ink leading-tight">Responsable de Hallazgo / Investigación / RSO</p>
           </div>
         </div>
+        {/* Investigador asignado */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-12 w-12 rounded-full bg-brand-700 text-white grid place-items-center text-[14px] font-bold shrink-0">
+            {investigatorName.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-semibold text-ink truncate">{investigatorName}</p>
+            <p className="text-[12px] text-ink-quiet mt-0.5">Seguridad Operativa</p>
+            <div className="mt-1.5"><Pill tone="brand" dot>Asignado</Pill></div>
+          </div>
+        </div>
+        {/* Dropdown para cambiar */}
         {!readOnly && (
-          <Field label="Asignar investigador" className="mb-3">
+          <Field label="Cambiar investigador asignado">
             <Select
-              value={RESPONSABLES_INVESTIGACION.includes(investigatorName) ? investigatorName : "__otro__"}
+              value={RESPONSABLES_INVESTIGACION.includes(investigatorName) ? investigatorName : ""}
               onChange={(e) => {
-                if (e.target.value === "__otro__") return;
-                store.setInvestigator(c.id, e.target.value);
+                if (e.target.value) store.setInvestigator(c.id, e.target.value);
               }}
             >
               <option value="">Seleccionar…</option>
@@ -701,33 +712,27 @@ function ResponsiblesAndWorkers({ c, store, readOnly }: { c: Store["cases"][numb
             </Select>
           </Field>
         )}
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-full bg-brand-700 text-white grid place-items-center text-[14px] font-bold shrink-0">
-            {investigatorName.split(" ").map((p) => p[0]).slice(0, 2).join("")}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[14px] font-semibold text-ink truncate">{investigatorName}</p>
-            <p className="text-[12px] text-ink-quiet mt-0.5">Seguridad Operativa</p>
-            <div className="mt-1.5"><Pill tone="brand" dot>Asignado</Pill></div>
-          </div>
-        </div>
       </Card>
 
       {/* 2. Trabajadores Involucrados */}
       <Card className="p-5">
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-lg bg-warning-soft text-warning-ink grid place-items-center"><UserCheck className="h-4.5 w-4.5" /></div>
-            <div>
+        <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-line-soft">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-9 w-9 rounded-lg bg-warning-soft text-warning-ink grid place-items-center shrink-0"><UserCheck className="h-4.5 w-4.5" /></div>
+            <div className="min-w-0">
               <p className="text-[10.5px] font-semibold tracking-[0.14em] uppercase text-ink-faint">Trabajadores Involucrados</p>
-              <p className="text-[13px] font-bold text-ink leading-tight">Personas relacionadas</p>
+              <p className="text-[13px] font-bold text-ink leading-tight">Personas relacionadas al caso</p>
             </div>
           </div>
-          <Pill tone="neutral">{involved.length}</Pill>
+          <Pill tone="neutral" className="shrink-0">{involved.length}</Pill>
         </div>
         {involved.length === 0 ? (
-          <div className="rounded-lg bg-surface border border-dashed border-line p-4 text-center">
-            <p className="text-[12px] text-ink-quiet mb-3">No hay trabajadores involucrados registrados.</p>
+          <div className="rounded-lg bg-surface border border-dashed border-line p-6 text-center">
+            <div className="h-10 w-10 rounded-full bg-surface-2 grid place-items-center mx-auto mb-2.5">
+              <UserCheck className="h-5 w-5 text-ink-faint" />
+            </div>
+            <p className="text-[12.5px] font-medium text-ink">Sin trabajadores involucrados</p>
+            <p className="text-[11.5px] text-ink-quiet mt-1 mb-3">No hay personas registradas en este caso.</p>
             {!readOnly && <WorkerSearchButton c={c} store={store} />}
           </div>
         ) : (
