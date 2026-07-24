@@ -520,6 +520,7 @@ export interface CaseFile {
     planDate?: string;
     scheduledDate?: string;
     annexes?: string;
+    secondResponsible?: string;
   };
   extensionRequest?: {
     motivo: string;

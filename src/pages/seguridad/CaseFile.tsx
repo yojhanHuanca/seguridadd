@@ -1106,6 +1106,7 @@ function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store:
   const [planDate, setPlanDate] = useState(new Date().toISOString().slice(0, 10));
   const [scheduledDate, setScheduledDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
   const [annexes, setAnnexes] = useState("");
+  const [secondResponsible, setSecondResponsible] = useState("");
   const [items, setItems] = useState<PlanFormItem[]>([{ name: "", description: "", owner: "", priority: "media", startDate: new Date().toISOString().slice(0, 10), dueDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) }]);
 
   const update = (i: number, key: keyof PlanFormItem, v: string) => setItems((p) => p.map((it, idx) => (idx === i ? { ...it, [key]: v } : it)));
@@ -1120,6 +1121,7 @@ function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store:
       elaboratedBy, actionType, description: description.trim(), startDate, dueDate, estimatedTime: "", priority,
       observations: observations.trim(), sentToArea: sentToArea as Area,
       planCode, planStatus, planDate, scheduledDate, annexes: annexes.trim(),
+      secondResponsible: secondResponsible.trim(),
       items: items.map((it) => ({ name: it.name.trim(), description: it.description.trim(), owner: it.owner.trim(), priority: it.priority, startDate: it.startDate, dueDate: it.dueDate })),
     });
     onSubmitted();
@@ -1159,6 +1161,17 @@ function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store:
             {(Object.keys(AREA_LABELS) as Area[]).map((a) => <option key={a} value={a}>{AREA_LABELS[a]} · Jefe: {AREA_HEADS[a]}</option>)}
           </Select>
         </Field>
+        {sentToArea && (
+          <Field label="Segundo responsable (opcional)">
+            <Select value={secondResponsible} onChange={(e) => setSecondResponsible(e.target.value)}>
+              <option value="">Seleccione un trabajador del área…</option>
+              {store.users
+                .filter(u => u.area === sentToArea && u.name !== AREA_HEADS[sentToArea as Area])
+                .map(u => <option key={u.code} value={u.name}>{u.name} · {u.cargo}</option>)
+              }
+            </Select>
+          </Field>
+        )}
         <Field label="Estado del Plan de Acción">
           <Select value={planStatus} onChange={(e) => setPlanStatus(e.target.value as "pendiente" | "cerrado")}>
             <option value="pendiente">Pendiente</option>
@@ -1229,7 +1242,7 @@ function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store:
 
       <div className="pt-3 border-t border-line-soft">
         <Button size="sm" disabled={!canSend} onClick={send}><Send className="h-4 w-4" /> Enviar Plan de Acción al jefe del área</Button>
-        {sentToArea && (
+        {sentToArea && AREA_HEADS[sentToArea as Area] && (
           <p className="text-[11.5px] text-ink-quiet mt-2">Se enviará correo a {AREA_HEADS[sentToArea as Area].toLowerCase().replace(" ", ".")}@metrolinea1.pe y se registrará en la bitácora.</p>
         )}
       </div>
@@ -1318,6 +1331,15 @@ function ExecutionStage({ c, store }: { c: Store["cases"][number]; store: Store 
   const accepted = !!c.execution?.acceptedByAreaAt;
   const allComplete = items.length > 0 && items.every((it) => it.status === "completado");
 
+  // Calcular tiempo límite de aprobación (2 días desde que se aprobó el plan)
+  const approvalDeadline = c.actionPlan?.reviewedAt 
+    ? new Date(new Date(c.actionPlan.reviewedAt).getTime() + 2 * 86400000)
+    : null;
+  const timeRemaining = approvalDeadline 
+    ? Math.max(0, Math.ceil((approvalDeadline.getTime() - new Date().getTime()) / 86400000))
+    : null;
+  const isUrgent = timeRemaining !== null && timeRemaining <= 0.5; // Menos de 12 horas
+
   const addEvidence = (kind: Evidence["kind"]) => {
     const names: Record<typeof kind, [string, string]> = {
       foto: ["evidencia_ejecucion.jpg", "2.4 MB"], video: ["evidencia_ejecucion.mp4", "14.8 MB"], documento: ["avance_ejecucion.pdf", "640 KB"],
@@ -1343,13 +1365,32 @@ function ExecutionStage({ c, store }: { c: Store["cases"][number]; store: Store 
         </div>
 
         {!accepted && (
-          <div className="rounded-lg bg-brand-50 border border-brand-200 p-4 flex items-center justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2.5">
-              <ShieldCheck className="h-4 w-4 text-brand-700" />
-              <p className="text-[12.5px] text-brand-800"><span className="font-semibold">Plan recibido.</span> El jefe del área debe aceptar el plan para iniciar la ejecución.</p>
+          <>
+            {timeRemaining !== null && (
+              <div className={`rounded-lg border p-4 flex items-center justify-between gap-3 mb-4 ${isUrgent ? 'bg-critical-soft border-critical/30' : 'bg-warning-soft border-warning/30'}`}>
+                <div className="flex items-center gap-2.5">
+                  {isUrgent ? <AlertCircle className="h-4 w-4 text-critical-ink" /> : <Clock className="h-4 w-4 text-warning-ink" />}
+                  <div>
+                    <p className={`text-[12.5px] font-semibold ${isUrgent ? 'text-critical-ink' : 'text-warning-ink'}`}>
+                      {isUrgent ? '¡URGENTE! Tiempo límite vencido' : `Tiempo restante para aprobar: ${timeRemaining} día(s)`}
+                    </p>
+                    <p className={`text-[11.5px] ${isUrgent ? 'text-critical-ink/80' : 'text-warning-ink/80'}`}>
+                      {isUrgent 
+                        ? 'El jefe del área debe aprobar el plan inmediatamente.' 
+                        : `Límite: ${approvalDeadline?.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="rounded-lg bg-brand-50 border border-brand-200 p-4 flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="h-4 w-4 text-brand-700" />
+                <p className="text-[12.5px] text-brand-800"><span className="font-semibold">Plan recibido.</span> El jefe del área debe aceptar el plan para iniciar la ejecución.</p>
+              </div>
+              <Button size="sm" onClick={() => store.acceptPlan(c.id)}><Check className="h-4 w-4" /> Aceptar Plan</Button>
             </div>
-            <Button size="sm" onClick={() => store.acceptPlan(c.id)}><Check className="h-4 w-4" /> Aceptar Plan</Button>
-          </div>
+          </>
         )}
 
         {/* Solicitud de ampliación pendiente */}
