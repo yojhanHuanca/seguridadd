@@ -18,6 +18,7 @@ import {
   Send,
   CheckCheck,
   FileSearch,
+  MapPin,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { SegShell } from "@/design-system/layout/SegShell";
@@ -37,6 +38,7 @@ import {
 import {
   AREA_LABELS,
   EVENT_LABELS,
+  STATIONS,
   STAGE_STATUS,
   type Stage,
 } from "@/lib/types";
@@ -122,11 +124,18 @@ export function Dashboard() {
 
   const byStation = useMemo(() => {
     const map = new Map<string, number>();
-    cases.forEach((c) => map.set(c.station, (map.get(c.station) ?? 0) + 1));
+    // Inicializar con las 26 estaciones reales
+    STATIONS.forEach((s) => map.set(s, 0));
+    // Contar casos reales por estación
+    cases.forEach((c) => {
+      if (map.has(c.station)) {
+        map.set(c.station, (map.get(c.station) ?? 0) + 1);
+      }
+    });
     return Array.from(map.entries())
-      .map(([name, value]) => ({ name, value, color: CHART_COLORS.brand }))
+      .map(([name, value]) => ({ name, value, color: value > 2 ? CHART_COLORS.critical : value > 0 ? CHART_COLORS.warning : CHART_COLORS.brandLight }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
+      .slice(0, 10);
   }, [cases]);
 
   const recent = useMemo(() => {
@@ -239,6 +248,35 @@ export function Dashboard() {
       {/* Incident Map — full width monitoring center */}
       <div className="mt-5">
         <IncidentMap />
+      </div>
+
+      {/* Casos por estación — data real de las 26 estaciones */}
+      <div className="mt-5 grid lg:grid-cols-2 gap-5">
+        <Card>
+          <CardHeader
+            icon={<Train className="h-4.5 w-4.5" />}
+            title="Casos por estación"
+            subtitle="Top 10 estaciones con mayor actividad · Línea 1"
+          />
+          <HBarsChart data={byStation} height={300} />
+        </Card>
+
+        {/* Resumen de estaciones sin incidencias */}
+        <Card>
+          <CardHeader
+            icon={<MapPin className="h-4.5 w-4.5" />}
+            title="Estaciones sin incidencias"
+            subtitle="Estaciones operativas sin casos registrados"
+          />
+          <div className="grid grid-cols-2 gap-2 mt-1">
+            {STATIONS.filter((s) => !cases.some((c) => c.station === s)).map((s) => (
+              <div key={s} className="flex items-center gap-2 rounded-lg border border-line-soft px-3 py-2">
+                <span className="h-2 w-2 rounded-full bg-brand-500" />
+                <span className="text-[12px] text-ink-soft truncate">{s}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
 
       {/* Recent activity — full width */}
