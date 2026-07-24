@@ -80,6 +80,11 @@ const VISUAL_RISK_ORDER: Record<VisualRisk, number> = {
   critico: 3,
 };
 
+const TALLERES: { name: string; x: number; y: number; km: number; tipo: string }[] = [
+  { name: "Taller Villa El Salvador", x: 30, y: 460, km: 0, tipo: "Mantenimiento pesado" },
+  { name: "Taller Bayóvar", x: 1192, y: 320, km: 34, tipo: "Mantenimiento ligero y garaje" },
+];
+
 const STATION_COORDS: { name: string; x: number; y: number; km: number }[] = [
   { name: "Villa El Salvador", x: 60, y: 445, km: 0 },
   { name: "Parque Industrial", x: 88, y: 415, km: 2.2 },
@@ -109,8 +114,8 @@ const STATION_COORDS: { name: string; x: number; y: number; km: number }[] = [
   { name: "Bayovar", x: 1156, y: 295, km: 34.0 },
 ];
 
-const MAP_W = 1220;
-const MAP_H = 500;
+const MAP_W = 1240;
+const MAP_H = 510;
 
 export function IncidentMap() {
   const { cases } = useStore();
@@ -344,6 +349,65 @@ export function IncidentMap() {
                       style={{ pointerEvents: "none" }}
                     >
                       km {station.km}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Talleres en los extremos */}
+              {TALLERES.map((taller) => {
+                const isHovered = hovered === taller.name;
+                return (
+                  <g
+                    key={taller.name}
+                    onMouseEnter={() => setHovered(taller.name)}
+                    onMouseLeave={() => setHovered(null)}
+                    className="cursor-pointer"
+                  >
+                    {/* Glow */}
+                    <circle cx={taller.x} cy={taller.y} r={16} fill="#14814a" opacity="0.1" />
+                    {/* Cuerpo del taller — rectángulo redondeado */}
+                    <rect
+                      x={taller.x - 13}
+                      y={taller.y - 11}
+                      width={26}
+                      height={22}
+                      rx={5}
+                      fill="#0c5431"
+                      stroke="#14814a"
+                      strokeWidth={isHovered ? 3 : 2}
+                      filter="url(#markerShadow)"
+                      style={{
+                        transform: isHovered ? "scale(1.12)" : undefined,
+                        transformOrigin: `${taller.x}px ${taller.y}px`,
+                      }}
+                    />
+                    {/* Icono de warehouse (texto W) */}
+                    <text x={taller.x} y={taller.y + 4} textAnchor="middle" fontSize="11" fontWeight="800" fill="#ffffff">
+                      W
+                    </text>
+                    {/* Etiqueta */}
+                    <text
+                      x={taller.x}
+                      y={taller.y - 18}
+                      textAnchor="middle"
+                      fontSize="9"
+                      fontWeight="700"
+                      fill="#0c5431"
+                      style={{ pointerEvents: "none" }}
+                    >
+                      {taller.name}
+                    </text>
+                    <text
+                      x={taller.x}
+                      y={taller.y + 22}
+                      textAnchor="middle"
+                      fontSize="7.5"
+                      fill="#5a7a6a"
+                      opacity="0.7"
+                      style={{ pointerEvents: "none" }}
+                    >
+                      {taller.tipo}
                     </text>
                   </g>
                 );
