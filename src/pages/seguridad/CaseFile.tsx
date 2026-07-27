@@ -1096,7 +1096,8 @@ function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store:
   const [elaboratedBy, setElaboratedBy] = useState("Antonio Rebaza Lizaraso");
   const [actionType, setActionType] = useState("Correctiva");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const today = new Date().toISOString().slice(0, 10);
+  const [startDate, setStartDate] = useState(today);
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
   const [priority, setPriority] = useState<Priority>(c.priority);
   const [observations, setObservations] = useState("");
@@ -1179,7 +1180,7 @@ function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store:
           </Select>
         </Field>
         <Field label="Fecha del Plan">
-          <Input type="date" value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
+          <Input type="date" min={today} value={planDate} onChange={(e) => setPlanDate(e.target.value)} />
         </Field>
         <Field label="Fecha Programada">
           <Input type="date" min={startDate} value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} />
@@ -1191,7 +1192,7 @@ function PlanForm({ c, store, onSubmitted }: { c: Store["cases"][number]; store:
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Resumen del plan de acción…" />
         </Field>
         <Field label="Fecha de inicio" required>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <Input type="date" min={today} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </Field>
         <Field label="Fecha límite" required>
           <Input type="date" min={startDate} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
@@ -1470,7 +1471,7 @@ function ExecutionStage({ c, store }: { c: Store["cases"][number]; store: Store 
         footer={<><Button variant="ghost" onClick={() => setExtOpen(false)}>Cancelar</Button><Button onClick={() => { if (extMotivo.trim() && extJustificacion.trim()) { store.requestExtension(c.id, { motivo: extMotivo.trim(), nuevaFecha: extFecha, justificacion: extJustificacion.trim() }); setExtOpen(false); setExtMotivo(""); setExtJustificacion(""); } }} disabled={!extMotivo.trim() || !extJustificacion.trim()}><Send className="h-4 w-4" /> Enviar solicitud a SO</Button></>}>
         <div className="space-y-4">
           <Field label="Motivo" required><Input value={extMotivo} onChange={(e) => setExtMotivo(e.target.value)} placeholder="Razón de la solicitud…" /></Field>
-          <Field label="Nueva fecha propuesta" required><Input type="date" value={extFecha} onChange={(e) => setExtFecha(e.target.value)} /></Field>
+          <Field label="Nueva fecha propuesta" required><Input type="date" min={today} value={extFecha} onChange={(e) => setExtFecha(e.target.value)} /></Field>
           <Field label="Justificación" required><Textarea value={extJustificacion} onChange={(e) => setExtJustificacion(e.target.value)} rows={3} placeholder="Justifique la ampliación…" /></Field>
         </div>
       </Modal>
